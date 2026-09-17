@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Remove Invisible Characters from Word and Google Docs</title>
+<meta name="description" content="Paste text from a document and strip invisible Unicode characters without losing a single word. Shows word and character counts before and after so you can check nothing real was removed. Free, no sign-up, runs in your browser.">
+<link rel="canonical" href="https://stripinvisible.com/clean-word">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://stripinvisible.com/clean-word">
+<meta property="og:title" content="Remove Invisible Characters from Word and Google Docs">
+<meta property="og:description" content="Clean invisible Unicode characters out of document text and see the word count before and after, so you can prove nothing real was removed.">
+<meta name="twitter:card" content="summary">
+<meta property="og:image" content="https://stripinvisible.com/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:image" content="https://stripinvisible.com/og-image.png">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/styles.css">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebApplication",
+      "name": "Clean Document Text — Invisible Character Remover",
+      "url": "https://stripinvisible.com/clean-word",
+      "applicationCategory": "UtilitiesApplication",
+      "operatingSystem": "Any (runs in a web browser)",
+      "browserRequirements": "Requires JavaScript",
+      "isAccessibleForFree": true,
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+      "description": "Remove invisible Unicode characters from text copied out of Word or Google Docs. Reports word and character counts before and after so you can verify nothing real was removed."
+    },
+    {
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "Strip Invisible", "item": "https://stripinvisible.com/" },
+        { "@type": "ListItem", "position": 2, "name": "Clean Word" }
+      ]
+    }
+  ]
+}
+</script>
+</head>
+<body>
+<main>
+
+  <nav class="crumbs" aria-label="Breadcrumb">
+    <a href="/">Strip Invisible</a> &rsaquo; <span>Clean Word</span>
+  </nav>
+
+  <h1>Remove Invisible Characters from Word and Google Docs</h1>
+
+  <p class="crosslink">For a spreadsheet column use the
+    <a href="/clean-excel">Excel cell cleaner</a>. For code and payloads use the
+    <a href="/clean-json">JSON cleaner</a>. To find the difference between two strings, use
+    <a href="/compare-text">compare texts</a>.</p>
+
+  <section class="tool">
+
+    <div class="pane">
+      <label for="winput">Paste text from your document</label>
+      <textarea id="winput" spellcheck="false" placeholder="Select the text in Word or Google Docs, copy it, paste it here..."></textarea>
+
+      <div class="row meta">
+        <input type="file" id="wfile" accept=".txt,.md,.markdown,.html,.htm,.csv,.log,text/plain">
+        <span id="wcount">0 characters</span>
+      </div>
+
+      <fieldset>
+        <legend>Options</legend>
+
+        <label class="opt check">
+          <input type="checkbox" id="wspaces">
+          <span>Normalize exotic spaces (NBSP and friends &rarr; normal space)</span>
+        </label>
+
+        <label class="opt check">
+          <input type="checkbox" id="waggressive">
+          <span>Aggressive mode &mdash; also strip joiners, variation selectors, bidi marks</span>
+        </label>
+        <p class="warn">Leave aggressive mode off unless the text is prose you are willing to rewrite; on codes, IDs and reference numbers it can do damage.</p>
+      </fieldset>
+
+      <div class="row">
+        <button id="wrun" class="primary" type="button">Clean text</button>
+        <button id="wclear" type="button">Clear</button>
+      </div>
+    </div>
+
+    <div class="pane">
+      <label for="woutput">Cleaned text</label>
+      <textarea id="woutput" spellcheck="false" readonly placeholder="Cleaned text appears here."></textarea>
+
+      <div class="row">
+        <button id="wcopy" type="button">Copy</button>
+        <button id="wdownload" type="button">Download .txt</button>
+        <span id="wcopied" class="copied" hidden>Copied</span>
+      </div>
+
+      <div id="wcounts" class="jsonstatus" hidden></div>
+      <div id="wreport"></div>
+    </div>
+
+  </section>
+
+  <section>
+    <h2>Why the counts are on the page</h2>
+    <p>When you clean a document you are about to submit, the worry is not whether it removed
+      something &mdash; it is whether it removed something you wanted. So this page reports the word
+      count and the character count before and after.</p>
+    <p>Removing invisible characters should never change the word count, because none of them are
+      word characters. If the word count moves, something is wrong and you should not use the
+      result. That is the whole point of showing it.</p>
+
+    <h2>Paste without formatting does not help</h2>
+    <p>The first thing everyone tries is <em>Paste without formatting</em>
+      (<code>Ctrl</code>+<code>Shift</code>+<code>V</code>) or <em>Clear formatting</em>. Neither
+      one touches these characters. Those commands strip styling &mdash; fonts, sizes, colours,
+      hyperlinks. A zero width space is not styling, it is a character, so it survives every
+      formatting command there is.</p>
+
+    <h2>What Word and Docs show you</h2>
+    <p>Both Word&rsquo;s <em>Show/Hide &para;</em> and Google Docs&rsquo; <em>Show non-printing
+      characters</em> reveal paragraph marks, spaces and tabs. Neither reliably marks every Unicode
+      invisible character, so do not treat a clean-looking &para; view as proof that the text is
+      clean. It is not proof of anything.</p>
+
+    <h2>Removing them inside Word or Docs</h2>
+    <p>Open Find and Replace (<code>Ctrl</code>+<code>H</code>), paste the actual character into
+      <em>Find what</em>, leave <em>Replace with</em> empty, and choose <em>Replace All</em>. The
+      Find box will look empty because the character is invisible; it is not empty. You can copy
+      the character from the <a href="/invisible-characters">character list</a>.</p>
+    <p>Repeat for each character you care about &mdash; usually <code>U+200B</code>,
+      <code>U+2060</code>, <code>U+00AD</code> and <code>U+FEFF</code>. That is tedious, which is
+      why the box above exists: select the text, copy it, clean it in one pass, paste it back.</p>
+
+    <h2>Where they come from in a document</h2>
+    <p>Text pasted out of a web page, a PDF, an email, a translation tool or a chat window. Word and
+      Docs keep what you paste, invisible characters included, and then carry them into whatever
+      comes next: a mail merge, a find, a spell check, an export, or a paste into another system
+      that then reports the two strings do not match.</p>
+
+    <h2>Is anything uploaded?</h2>
+    <p>No. There is no backend. The cleaning runs in this browser tab, so a confidential document
+      never leaves your device.</p>
+  </section>
+
+  <footer class="foot">
+    <a href="/privacy">Privacy</a>
+  </footer>
+
+</main>
+<script src="/core.js"></script>
+<script src="/clean-word.js"></script>
+<!-- Cloudflare Web Analytics -->
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token":"20874485db814b21a0a76d82d7f9b4de"}'></script>
+</body>
+</html>
