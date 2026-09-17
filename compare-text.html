@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Compare Two Texts and Find Invisible Differences</title>
+<meta name="description" content="Paste two strings that look identical. This page finds the exact character positions where they differ, shows the codepoint of each character at the difference, and tells you whether the mismatch is only invisible characters. Free, no sign-up, runs in your browser.">
+<link rel="canonical" href="https://stripinvisible.com/compare-text">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://stripinvisible.com/compare-text">
+<meta property="og:title" content="Compare Two Texts and Find Invisible Differences">
+<meta property="og:description" content="Find the exact character positions where two texts differ and see the codepoint of each. Tells you whether the mismatch is only invisible characters.">
+<meta name="twitter:card" content="summary">
+<meta property="og:image" content="https://stripinvisible.com/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:image" content="https://stripinvisible.com/og-image.png">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/styles.css">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebApplication",
+      "name": "Compare Texts — Find the Difference",
+      "url": "https://stripinvisible.com/compare-text",
+      "applicationCategory": "DeveloperApplication",
+      "operatingSystem": "Any (runs in a web browser)",
+      "browserRequirements": "Requires JavaScript",
+      "isAccessibleForFree": true,
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+      "description": "Find the exact character positions where two texts differ and see the codepoint of each. Optionally strip invisible characters and compare again to tell whether the mismatch was only hidden marks."
+    },
+    {
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "Strip Invisible", "item": "https://stripinvisible.com/" },
+        { "@type": "ListItem", "position": 2, "name": "Compare Texts" }
+      ]
+    }
+  ]
+}
+</script>
+</head>
+<body>
+<main>
+
+  <nav class="crumbs" aria-label="Breadcrumb">
+    <a href="/">Strip Invisible</a> &rsaquo; <span>Compare Texts</span>
+  </nav>
+
+  <h1>Compare Two Texts and Find Invisible Differences</h1>
+
+  <p class="crosslink">Already know one of them is contaminated and want it gone? Use the
+    <a href="/zero-width-space">zero-width space remover</a> or the
+    <a href="/clean-json">JSON cleaner</a>. This page is for finding the difference first.</p>
+
+  <section class="tool">
+
+    <div class="pane">
+      <label for="a">Text A</label>
+      <textarea id="a" spellcheck="false" placeholder="Paste the first string here..."></textarea>
+      <span class="hint" id="acount">0 characters</span>
+    </div>
+
+    <div class="pane">
+      <label for="b">Text B</label>
+      <textarea id="b" spellcheck="false" placeholder="Paste the second string here..."></textarea>
+      <span class="hint" id="bcount">0 characters</span>
+    </div>
+
+  </section>
+
+  <section>
+    <div class="row">
+      <button id="cmp" class="primary" type="button">Compare</button>
+      <button id="cleanCmp" type="button">Clean both, then compare</button>
+      <button id="clr" type="button">Clear</button>
+    </div>
+
+    <div id="summary" class="jsonstatus" hidden></div>
+    <div id="firstDiff" hidden></div>
+    <div id="allDiff" hidden></div>
+    <div id="report"></div>
+  </section>
+
+  <section>
+    <h2>How to read the result</h2>
+    <p>For each differing position you get the codepoint of the character in A and the codepoint of
+      the character in B, with the Unicode name if it has one. Position is counted in Unicode code
+      points, not bytes &mdash; a position that lands on an emoji family with a zero width joiner
+      inside it will still make sense.</p>
+    <p>If you press <em>Clean both, then compare</em>, the page strips invisible characters from
+      both sides and compares again. If the cleaned versions are equal, the mismatch was hidden
+      characters and nothing more. If they still differ, there is real wording or visible-punctuation
+      difference to investigate.</p>
+
+    <h2>Why this is useful</h2>
+    <p>The classic case is a string that renders identically but will not match a key, will not
+      compare equal in code, or will not find a record. Most of the time, invisible characters are
+      the cause, and you want to know exactly where and which ones before you delete anything.</p>
+    <p>This page tells you exactly that, with codepoints, so you can decide whether to strip them
+      and whether to trust the cleaned version.</p>
+
+    <h2>Limits</h2>
+    <p>Up to fifty differing positions are listed. If there are more than fifty, the page tells you
+      the total and shows the first fifty. The first-difference panel always shows position 1, 2
+      or 3 with surrounding context, regardless of how many differences there are.</p>
+    <p>Nothing is uploaded. The comparison runs in this browser tab.</p>
+  </section>
+
+  <footer class="foot">
+    <a href="/privacy">Privacy</a>
+  </footer>
+
+</main>
+<script src="/core.js"></script>
+<script src="/compare-text.js"></script>
+<!-- Cloudflare Web Analytics -->
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token":"20874485db814b21a0a76d82d7f9b4de"}'></script>
+</body>
+</html>
