@@ -3,8 +3,10 @@
 Strip invisible Unicode characters out of AI-generated text — zero-width spaces,
 word joiners, tag characters, private-use marks, soft hyphens and BOMs.
 
-Runs entirely in the browser. No backend, no upload, no sign-up, no analytics
-scripts. Everything happens in the page.
+Runs entirely in the browser. No backend, no upload, no sign-up.
+Page-level analytics only (Cloudflare Web Analytics beacon, cookieless).
+
+Live: <https://stripinvisible.com>
 
 ## Build
 
@@ -18,7 +20,19 @@ added to the sitemap.
 
 ## Deploy
 
-Static hosting only. Build command `node build.mjs`, output directory `dist`.
+Hosted on Cloudflare Pages (project `stripinvisible`, direct upload — this
+Cloudflare account has no GitHub App installed, so Pages does not build from the
+repo). From this repo root:
+
+```
+npm run build
+npx wrangler pages deploy dist --project-name stripinvisible --branch main
+```
+
+Needs `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` in the environment.
+`.github/workflows/deploy.yml` does the same thing on every push to `main`,
+provided the repo secrets `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`
+are set.
 
 ## What it does not do
 
