@@ -1,0 +1,10 @@
+{
+  "name": "stripinvisible",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Strip invisible Unicode watermarks out of AI-generated text. Runs entirely in the browser.",
+  "scripts": {
+    "build": "node build.mjs"
+  }
+}
