@@ -258,3 +258,62 @@ button.primary:hover { filter: brightness(1.06); }
 section > ul { padding-left: 20px; }
 
 li { margin: 4px 0; }
+
+/* ---------- cross links ---------- */
+
+.crosslink {
+  margin: 0 0 16px;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.crosslink a { color: var(--accent); }
+
+/* ---------- highlight preview ---------- */
+
+.hint {
+  color: var(--muted);
+  font-size: 0.85rem;
+  margin: 0 0 8px;
+}
+
+.preview {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px;
+  max-height: 280px;
+  overflow-y: auto;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.85rem;
+  line-height: 2;
+}
+
+.preview.empty {
+  color: var(--muted);
+  font-family: inherit;
+}
+
+.chip {
+  background: #fff1f0;
+  border: 1px solid #ffccc7;
+  color: #a8071a;
+  border-radius: 4px;
+  padding: 1px 4px;
+  font-size: 0.75rem;
+  cursor: help;
+}
+
+.chip.soft {
+  background: var(--warn-bg);
+  border-color: #ffd591;
+  color: var(--warn);
+}
+
+.legend {
+  color: var(--muted);
+  font-size: 0.8rem;
+  margin: 8px 0 0;
+}
