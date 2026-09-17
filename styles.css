@@ -432,3 +432,15 @@ td.name { min-width: 140px; }
 }
 
 .jsonstatus.bad span { color: #a8071a; }
+
+/* ---------- footer ---------- */
+
+.foot {
+  margin-top: 32px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.foot a { color: var(--muted); }
