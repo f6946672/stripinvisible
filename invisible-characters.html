@@ -1,0 +1,301 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Invisible Unicode Characters — The Complete List</title>
+<meta name="description" content="Every invisible Unicode character in one place: zero width space U+200B, word joiner U+2060, BOM U+FEFF, soft hyphen U+00AD, tag characters, variation selectors and private use marks. What each one does, and whether it is safe to delete.">
+<link rel="canonical" href="https://stripinvisible.com/invisible-characters">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://stripinvisible.com/invisible-characters">
+<meta property="og:title" content="Invisible Unicode Characters — The Complete List">
+<meta property="og:description" content="Every invisible Unicode character in one place, what each one does, and whether deleting it is safe.">
+<meta name="twitter:card" content="summary">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/styles.css">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebPage",
+      "name": "Invisible Unicode Characters — The Complete List",
+      "url": "https://stripinvisible.com/invisible-characters",
+      "description": "Every invisible Unicode character in one place, what each one does, and whether deleting it is safe."
+    },
+    {
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "Strip Invisible", "item": "https://stripinvisible.com/" },
+        { "@type": "ListItem", "position": 2, "name": "Invisible Unicode Characters" }
+      ]
+    }
+  ]
+}
+</script>
+</head>
+<body>
+<main>
+
+  <nav class="crumbs" aria-label="Breadcrumb">
+    <a href="/">Strip Invisible</a> &rsaquo; <span>Invisible Unicode Characters</span>
+  </nav>
+
+  <h1>Invisible Unicode Characters: The Complete List</h1>
+
+  <p class="crosslink">Want them out of your text instead of reading about them? Use the
+    <a href="/zero-width-space">zero-width space remover</a> or the
+    <a href="/">Claude watermark remover</a>.</p>
+
+  <p>These characters take up no room, print nothing, and survive copy and paste. Most of them
+    exist for a good reason &mdash; telling a browser where a word may break, holding an emoji
+    family together, setting text direction for Arabic. The trouble starts when they travel
+    somewhere they were not meant to be: into a database key, a JSON string, a search box, or text
+    copied out of a chat window.</p>
+
+  <p>Every character below is listed with what it actually does and whether deleting it is safe.
+    The copy button puts the character itself on your clipboard, which is handy when you need one
+    to test with.</p>
+
+      <h2>Always invisible, always safe to delete</h2>
+      <p>These carry no meaning in finished text. Every one of them is removed by default, in both tools on this site.</p>
+      <div class="scroll">
+        <table>
+          <thead>
+            <tr><th>Codepoint</th><th>Name</th><th>What it does</th><th><span class="sr">Copy</span></th></tr>
+          </thead>
+          <tbody>
+        <tr>
+          <td class="cp">U+200B</td>
+          <td class="name">ZERO WIDTH SPACE</td>
+          <td>Lets a browser break a long word. Invisible, survives copy and paste, and the most common hidden character there is.<div class="ent">HTML entity <code>&#x200B;</code></div></td>
+          <td><button class="copycp" type="button" data-cp="8203">Copy</button></td>
+        </tr>
+        <tr>
+          <td class="cp">U+2060</td>
+          <td class="name">WORD JOINER</td>
+          <td>Stops a line break between two words without drawing anything.<div class="ent">HTML entity <code>&#x2060;</code></div></td>
+          <td><button class="copycp" type="button" data-cp="8288">Copy</button></td>
+        </tr>
+        <tr>
+          <td class="cp">U+00AD</td>
+          <td class="name">SOFT HYPHEN</td>
+          <td>Marks where a word may break. Only becomes visible if the line actually breaks there.<div class="ent">HTML entity <code>&#xAD;</code></div></td>
+          <td><button class="copycp" type="button" data-cp="173">Copy</button></td>
+        </tr>
+        <tr>
+          <td class="cp">U+034F</td>
+          <td class="name">COMBINING GRAPHEME JOINER</td>
+          <td>Ties two characters together so they behave as one.<div class="ent">HTML entity <code>&#x34F;</code></div></td>
+          <td><button class="copycp" type="button" data-cp="847">Copy</button></td>
+        </tr>
+        <tr>
+          <td class="cp">U+FEFF</td>
+          <td class="name">ZERO WIDTH NO-BREAK SPACE</td>
+          <td>A byte order mark at the start of a file. Invisible and unwanted anywhere else.<div class="ent">HTML entity <code>&#xFEFF;</code></div></td>
+          <td><button class="copycp" type="button" data-cp="65279">Copy</button></td>
+        </tr>
+        <tr>
+          <td class="cp">U+E0001</td>
+          <td class="name">LANGUAGE TAG</td>
+          <td>Part of the tag character block, used to label language inside a string.<div class="ent">HTML entity <code>&#xE0001;</code></div></td>
+          <td><button class="copycp" type="button" data-cp="917505">Copy</button></td>
+        </tr>
+        <tr>
+          <td class="cp">U+E0020–U+E007F</td>
+          <td class="name">TAG CHARACTERS</td>
+          <td>96 characters that spell out hidden ASCII text. Used to fingerprint copied output.</td>
+          <td class="na">range</td>
+        </tr>
+        <tr>
+          <td class="cp">U+E000–U+F8FF</td>
+          <td class="name">PRIVATE USE AREA</td>
+          <td>Reserved for private agreements. In copied text it is nearly always tracking or a watermark.</td>
+          <td class="na">range</td>
+        </tr>
+        <tr>
+          <td class="cp">U+F0000–U+FFFFD</td>
+          <td class="name">PRIVATE USE PLANE 15</td>
+          <td>Same idea as the private use area, one plane up.</td>
+          <td class="na">range</td>
+        </tr>
+        <tr>
+          <td class="cp">U+100000–U+10FFFD</td>
+          <td class="name">PRIVATE USE PLANE 16</td>
+          <td>The last private use plane.</td>
+          <td class="na">range</td>
+        </tr>
+        <tr>
+          <td class="cp">U+FFF9–U+FFFB</td>
+          <td class="name">INTERLINEAR ANNOTATION</td>
+          <td>Three marks for ruby-style annotation. Rarely intended in plain text.</td>
+          <td class="na">range</td>
+        </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h2>Invisible, but they carry meaning</h2>
+      <p>Deleting these changes how text renders. They stay unless you turn on aggressive mode.</p>
+      <div class="scroll">
+        <table>
+          <thead>
+            <tr><th>Codepoint</th><th>Name</th><th>What it does</th><th><span class="sr">Copy</span></th></tr>
+          </thead>
+          <tbody>
+        <tr>
+          <td class="cp">U+200D</td>
+          <td class="name">ZERO WIDTH JOINER</td>
+          <td>Joins characters. This is what holds an emoji family together as one picture.<div class="ent">HTML entity <code>&#x200D;</code></div></td>
+          <td><button class="copycp" type="button" data-cp="8205">Copy</button></td>
+        </tr>
+        <tr>
+          <td class="cp">U+200C</td>
+          <td class="name">ZERO WIDTH NON-JOINER</td>
+          <td>Stops a join. Required for correct Persian, Arabic and Devanagari.<div class="ent">HTML entity <code>&#x200C;</code></div></td>
+          <td><button class="copycp" type="button" data-cp="8204">Copy</button></td>
+        </tr>
+        <tr>
+          <td class="cp">U+200E</td>
+          <td class="name">LEFT-TO-RIGHT MARK</td>
+          <td>Forces left-to-right direction for the characters after it.<div class="ent">HTML entity <code>&#x200E;</code></div></td>
+          <td><button class="copycp" type="button" data-cp="8206">Copy</button></td>
+        </tr>
+        <tr>
+          <td class="cp">U+200F</td>
+          <td class="name">RIGHT-TO-LEFT MARK</td>
+          <td>Forces right-to-left direction for the characters after it.<div class="ent">HTML entity <code>&#x200F;</code></div></td>
+          <td><button class="copycp" type="button" data-cp="8207">Copy</button></td>
+        </tr>
+        <tr>
+          <td class="cp">U+061C</td>
+          <td class="name">ARABIC LETTER MARK</td>
+          <td>Bidirectional mark used with Arabic script.<div class="ent">HTML entity <code>&#x61C;</code></div></td>
+          <td><button class="copycp" type="button" data-cp="1564">Copy</button></td>
+        </tr>
+        <tr>
+          <td class="cp">U+202A–U+202E</td>
+          <td class="name">BIDI EMBEDDING AND OVERRIDE</td>
+          <td>Five characters that set text direction. Safe to delete only in matched pairs.</td>
+          <td class="na">range</td>
+        </tr>
+        <tr>
+          <td class="cp">U+2066–U+2069</td>
+          <td class="name">BIDI ISOLATES</td>
+          <td>Four characters that isolate a run from its surroundings.</td>
+          <td class="na">range</td>
+        </tr>
+        <tr>
+          <td class="cp">U+180B–U+180D</td>
+          <td class="name">MONGOLIAN FREE VARIATION SELECTORS</td>
+          <td>Select a glyph shape in Mongolian.</td>
+          <td class="na">range</td>
+        </tr>
+        <tr>
+          <td class="cp">U+FE00–U+FE0F</td>
+          <td class="name">VARIATION SELECTORS</td>
+          <td>Choose a glyph variant. Selector 16 is what keeps an emoji looking like an emoji.</td>
+          <td class="na">range</td>
+        </tr>
+        <tr>
+          <td class="cp">U+E0100–U+E01EF</td>
+          <td class="name">VARIATION SELECTOR SUPPLEMENT</td>
+          <td>More glyph variants, mostly for CJK ideographs.</td>
+          <td class="na">range</td>
+        </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h2>Spaces that are not the space bar</h2>
+      <p>These look like a space and are not U+0020. They break comparisons and searches. Left alone unless you turn on the spaces option.</p>
+      <div class="scroll">
+        <table>
+          <thead>
+            <tr><th>Codepoint</th><th>Name</th><th>What it does</th><th><span class="sr">Copy</span></th></tr>
+          </thead>
+          <tbody>
+        <tr>
+          <td class="cp">U+00A0</td>
+          <td class="name">NO-BREAK SPACE</td>
+          <td>A space that will not break a line. The one people paste by accident most often.<div class="ent">HTML entity <code>&#xA0;</code></div></td>
+          <td><button class="copycp" type="button" data-cp="160">Copy</button></td>
+        </tr>
+        <tr>
+          <td class="cp">U+202F</td>
+          <td class="name">NARROW NO-BREAK SPACE</td>
+          <td>A thin unbreakable space, used before units and currency in French typography.<div class="ent">HTML entity <code>&#x202F;</code></div></td>
+          <td><button class="copycp" type="button" data-cp="8239">Copy</button></td>
+        </tr>
+        <tr>
+          <td class="cp">U+205F</td>
+          <td class="name">MEDIUM MATHEMATICAL SPACE</td>
+          <td>A medium space for use inside formulas.<div class="ent">HTML entity <code>&#x205F;</code></div></td>
+          <td><button class="copycp" type="button" data-cp="8287">Copy</button></td>
+        </tr>
+        <tr>
+          <td class="cp">U+3000</td>
+          <td class="name">IDEOGRAPHIC SPACE</td>
+          <td>A full-width space that matches the width of a CJK character.<div class="ent">HTML entity <code>&#x3000;</code></div></td>
+          <td><button class="copycp" type="button" data-cp="12288">Copy</button></td>
+        </tr>
+        <tr>
+          <td class="cp">U+2000–U+200A</td>
+          <td class="name">FIXED-WIDTH SPACES</td>
+          <td>Eleven widths from EN QUAD down to HAIR SPACE.</td>
+          <td class="na">range</td>
+        </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h2>Invisible and deliberately left alone</h2>
+      <p>These two are line and paragraph breaks. They are real structure, not junk, so neither tool removes them.</p>
+      <div class="scroll">
+        <table>
+          <thead>
+            <tr><th>Codepoint</th><th>Name</th><th>What it does</th><th><span class="sr">Copy</span></th></tr>
+          </thead>
+          <tbody>
+        <tr>
+          <td class="cp">U+2028</td>
+          <td class="name">LINE SEPARATOR</td>
+          <td>A line break that is not a newline character. It breaks JSON strings and some parsers.<div class="ent">HTML entity <code>&#x2028;</code></div></td>
+          <td><button class="copycp" type="button" data-cp="8232">Copy</button></td>
+        </tr>
+        <tr>
+          <td class="cp">U+2029</td>
+          <td class="name">PARAGRAPH SEPARATOR</td>
+          <td>A paragraph break that is not a newline character. Same parsing problem.<div class="ent">HTML entity <code>&#x2029;</code></div></td>
+          <td><button class="copycp" type="button" data-cp="8233">Copy</button></td>
+        </tr>
+
+          </tbody>
+        </table>
+      </div>
+
+  <h2>Why they end up in ordinary text</h2>
+  <p>Three sources cover almost all of it. Rich text editors insert zero width spaces and
+    no-break spaces as you type, and they come along when you copy. AI chat output carries
+    invisible marks that identify it. And text copied from a web page picks up whatever the page
+    was using for layout.</p>
+  <p>None of those are visible, which is the whole problem. A string that renders identically to
+    another one can still fail to match it.</p>
+
+  <h2>How to find them in your text</h2>
+  <p>Paste the text into the <a href="/zero-width-space">zero-width space remover</a>. It marks
+    each hidden character in place, so you see where it sits before anything is deleted, and then
+    removes it. Nothing is uploaded &mdash; the scan runs in your browser.</p>
+
+  <h2>A note on the other side of this</h2>
+  <p>The same characters are also used to hide text in a URL, to smuggle words past a filter, and
+    to fingerprint text so its origin can be traced later. That is worth knowing, because it
+    explains why some of them show up in places they were never typed. This page exists to help
+    you find them and take them out, not to help you hide anything.</p>
+
+</main>
+<script src="/list.js"></script>
+<!-- Cloudflare Web Analytics -->
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token":"20874485db814b21a0a76d82d7f9b4de"}'></script>
+</body>
+</html>
