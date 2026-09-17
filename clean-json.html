@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Remove Invisible Characters From JSON — Clean and Validate in Your Browser</title>
+<meta name="description" content="Paste JSON that will not parse or will not match. This page strips invisible Unicode characters — zero width space, BOM, soft hyphen, tag characters — then tells you whether the result is valid JSON. Free, no sign-up, runs in your browser.">
+<link rel="canonical" href="https://stripinvisible.com/clean-json">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://stripinvisible.com/clean-json">
+<meta property="og:title" content="Remove Invisible Characters From JSON — Clean and Validate in Your Browser">
+<meta property="og:description" content="Strip invisible Unicode characters from JSON, then find out whether it parses. Free, no sign-up, runs in your browser.">
+<meta name="twitter:card" content="summary">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/styles.css">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebApplication",
+      "name": "Clean JSON — Invisible Character Remover",
+      "url": "https://stripinvisible.com/clean-json",
+      "applicationCategory": "DeveloperApplication",
+      "operatingSystem": "Any (runs in a web browser)",
+      "browserRequirements": "Requires JavaScript",
+      "isAccessibleForFree": true,
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+      "description": "Paste JSON that will not parse. This page removes invisible Unicode characters and then reports whether the result is valid JSON."
+    },
+    {
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "Strip Invisible", "item": "https://stripinvisible.com/" },
+        { "@type": "ListItem", "position": 2, "name": "Clean JSON" }
+      ]
+    }
+  ]
+}
+</script>
+</head>
+<body>
+<main>
+
+  <nav class="crumbs" aria-label="Breadcrumb">
+    <a href="/">Strip Invisible</a> &rsaquo; <span>Clean JSON</span>
+  </nav>
+
+  <h1>Remove Invisible Characters From JSON</h1>
+
+  <p class="crosslink">Not JSON? Use the <a href="/zero-width-space">zero-width space remover</a>.
+    Want the full list of hidden characters? See
+    <a href="/invisible-characters">invisible Unicode characters</a>.</p>
+
+  <section class="tool">
+
+    <div class="pane">
+      <label for="jinput">Paste your JSON</label>
+      <textarea id="jinput" spellcheck="false" placeholder='Paste JSON that fails to parse, or a string that will not match a key you can see...'></textarea>
+
+      <div class="row meta">
+        <input type="file" id="jfile" accept=".json,.txt,.log,application/json,text/plain">
+        <span id="jcount">0 characters</span>
+      </div>
+
+      <fieldset>
+        <legend>Options</legend>
+
+        <label class="opt check">
+          <input type="checkbox" id="jaggressive">
+          <span>Aggressive mode &mdash; also strip joiners, variation selectors, bidi marks</span>
+        </label>
+        <label class="opt check">
+          <input type="checkbox" id="jspaces">
+          <span>Normalize exotic spaces (NBSP, thin, hair, figure)</span>
+        </label>
+        <p class="warn">Aggressive mode rewrites emoji and right-to-left runs. For JSON payloads you usually want it off unless the text is prose.</p>
+      </fieldset>
+
+      <div class="row">
+        <button id="jrun" class="primary" type="button">Clean and validate</button>
+        <button id="jclear" type="button">Clear</button>
+      </div>
+    </div>
+
+    <div class="pane">
+      <label for="joutput">Cleaned JSON</label>
+      <textarea id="joutput" spellcheck="false" readonly placeholder="Cleaned JSON appears here."></textarea>
+
+      <div class="row">
+        <button id="jcopy" type="button">Copy</button>
+        <button id="jdownload" type="button">Download .json</button>
+        <span id="jcopied" class="copied" hidden>Copied</span>
+      </div>
+
+      <div id="jvalid"></div>
+      <div id="report"></div>
+    </div>
+
+  </section>
+
+  <section>
+    <h2>Where they are</h2>
+    <p class="hint">Every hidden character is marked in place, so you can see which key or string it was hiding in.</p>
+    <div id="jhighlight" class="preview empty">Nothing scanned yet.</div>
+    <p class="legend"><mark class="chip">U+200B</mark> always invisible &mdash; removed in default mode &nbsp;
+      <mark class="chip soft">U+200D</mark> invisible only in aggressive mode</p>
+  </section>
+
+  <section>
+    <h2>Why invisible characters break JSON</h2>
+    <p>Three failures come up over and over:</p>
+
+    <h3>A byte order mark at the very start</h3>
+    <p>A file saved as UTF-8 with BOM starts with <code>U+FEFF</code>. <code>JSON.parse</code> does not
+      skip it, so the first thing it sees is not <code>{</code> or <code>[</code> and it throws
+      <em>Unexpected token</em> on line 1. The character is invisible, so the file looks like it starts
+      with a bracket. It does not.</p>
+
+    <h3>Zero width characters inside keys and values</h3>
+    <p>A key that renders as <code>name</code> but contains <code>U+200B</code> is not the key
+      <code>name</code>. The JSON parses fine, which is worse than an error: lookups silently miss,
+      comparisons fail, and the two strings look identical in every log you print.</p>
+
+    <h3>Tag characters and private use marks</h3>
+    <p>Text copied out of a chat window or a web page can carry <code>U+E0020</code>&ndash;<code>U+E007F</code>
+      tag characters or private use codepoints. They are valid in a JSON string, so nothing complains,
+      and they travel with the data into whatever consumes it.</p>
+
+    <h2>How to find them in your editor</h2>
+    <p>In VS Code, open the file, press <code>Ctrl</code>+<code>F</code>, turn on the regular expression
+      button and search for:</p>
+    <p><code>[\u200B\u200C\u200D\u00AD\u2060\uFEFF\u034F]</code></p>
+    <p>Every hit is a character that should almost certainly not be there. In Vim or Neovim the same
+      pattern works with <code>/</code>. On the command line,
+      <code>grep -P '[\x{200B}\x{200C}\x{200D}\x{00AD}\x{2060}\x{FEFF}]'</code> finds them in a file.</p>
+
+    <h2>What this page does and does not do</h2>
+    <p>It removes invisible characters and then runs <code>JSON.parse</code> on the result, so you find
+      out whether the cleanup was enough. That is the whole job.</p>
+    <p>It does not pretty-print, minify, sort keys or repair syntax. A missing comma is still a missing
+      comma. If the panel says the JSON is invalid after cleaning, the remaining problem is real JSON
+      syntax, not a hidden character.</p>
+
+    <h2>Two characters worth knowing about</h2>
+    <p><code>U+2028</code> LINE SEPARATOR and <code>U+2029</code> PARAGRAPH SEPARATOR are legal inside a
+      JSON string but were illegal in JavaScript source before ES2019, so they break the common pattern
+      of dropping JSON straight into a <code>&lt;script&gt;</code> tag. They also look like ordinary
+      line breaks. This page leaves both alone, because in a JSON string they may be exactly what was
+      intended.</p>
+
+    <h2>Is anything uploaded?</h2>
+    <p>No. There is no backend. The cleanup and the validation both run in this browser tab, and your
+      JSON never leaves your device.</p>
+  </section>
+
+</main>
+<script src="/core.js"></script>
+<script src="/clean-json.js"></script>
+<!-- Cloudflare Web Analytics -->
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token":"20874485db814b21a0a76d82d7f9b4de"}'></script>
+</body>
+</html>
