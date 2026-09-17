@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Zero-Width Space Remover — Find and Delete Invisible Characters</title>
+<meta name="description" content="Paste text and find every invisible Unicode character: zero-width space U+200B, word joiner U+2060, BOM U+FEFF, soft hyphen U+00AD, tag characters. See where they sit, then delete them. Free, no sign-up, runs in your browser.">
+<link rel="canonical" href="https://stripinvisible.com/zero-width-space">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://stripinvisible.com/zero-width-space">
+<meta property="og:title" content="Zero-Width Space Remover — Find and Delete Invisible Characters">
+<meta property="og:description" content="See every invisible Unicode character in your text, where it sits, and delete it in one click. Free, no sign-up, runs in your browser.">
+<meta name="twitter:card" content="summary">
+<link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<main>
+
+  <h1>Zero-Width Space Remover</h1>
+
+  <p class="crosslink">Invisible characters pasted out of an AI chat? Use the
+    <a href="/">Claude watermark remover</a> instead — it is tuned for that.
+    This page is for everything else.</p>
+
+  <section class="tool">
+
+    <div class="pane">
+      <label for="zinput">Paste your text</label>
+      <textarea id="zinput" spellcheck="false" placeholder="Paste text that behaves strangely: fails a search, breaks JSON, or has a space you cannot delete..."></textarea>
+
+      <div class="row meta">
+        <input type="file" id="zfile" accept=".txt,.md,.markdown,.html,.htm,.csv,.json,.log,text/plain">
+        <span id="zcount">0 characters</span>
+      </div>
+
+      <fieldset>
+        <legend>Options</legend>
+
+        <label class="opt check">
+          <input type="checkbox" id="zspaces">
+          <span>Normalize exotic spaces (NBSP, thin, hair, figure)</span>
+        </label>
+
+        <label class="opt check">
+          <input type="checkbox" id="ztypography">
+          <span>Typography pass (curly quotes, ellipsis, en dash &rarr; plain ASCII)</span>
+        </label>
+
+        <label class="opt check">
+          <input type="checkbox" id="zaggressive">
+          <span>Aggressive mode &mdash; also strip joiners, variation selectors, bidi marks</span>
+        </label>
+        <p class="warn">Aggressive mode can visibly change emoji, flags and right-to-left text. Off by default.</p>
+      </fieldset>
+
+      <div class="row">
+        <button id="zrun" class="primary" type="button">Find and remove</button>
+        <button id="zclear" type="button">Clear</button>
+      </div>
+    </div>
+
+    <div class="pane">
+      <label for="zoutput">Cleaned text</label>
+      <textarea id="zoutput" spellcheck="false" readonly placeholder="Cleaned text appears here."></textarea>
+
+      <div class="row">
+        <button id="zcopy" type="button">Copy</button>
+        <button id="zdownload" type="button">Download .txt</button>
+        <span id="zcopied" class="copied" hidden>Copied</span>
+      </div>
+
+      <div id="report"></div>
+    </div>
+
+  </section>
+
+  <section>
+    <h2>Where they are</h2>
+    <p class="hint">Every hidden character is marked in place, so you can see it in context before deleting anything.</p>
+    <div id="zhighlight" class="preview empty">Nothing scanned yet.</div>
+    <p class="legend"><mark class="chip">U+200B</mark> always invisible &mdash; removed in default mode &nbsp;
+      <mark class="chip soft">U+200D</mark> invisible only in aggressive mode</p>
+  </section>
+
+  <section>
+    <h2>What a zero-width space is</h2>
+    <p><code>U+200B</code> ZERO WIDTH SPACE is a real character that takes up no room. It exists so a browser knows where it may break a long word. It is invisible, it survives copy and paste, and it is the single most common reason a string that looks identical to another one fails to match it.</p>
+    <p>It is not the only one. The characters below are all invisible and all survive a copy:</p>
+    <ul>
+      <li><code>U+200B</code> zero width space</li>
+      <li><code>U+2060</code> word joiner</li>
+      <li><code>U+FEFF</code> zero width no-break space, better known as a BOM</li>
+      <li><code>U+00AD</code> soft hyphen</li>
+      <li><code>U+034F</code> combining grapheme joiner</li>
+      <li><code>U+E0001</code> language tag and <code>U+E0020</code>&ndash;<code>U+E007F</code> tag characters</li>
+      <li>Private use characters: <code>U+E000</code>&ndash;<code>U+F8FF</code>, plane 15, plane 16</li>
+    </ul>
+
+    <h2>How to spot one</h2>
+    <p>The symptoms are more recognizable than the character:</p>
+    <ul>
+      <li>Two strings that render identically compare as unequal</li>
+      <li>A database lookup or a <code>grep</code> misses a line you can see</li>
+      <li>JSON or YAML fails to parse with a confusing error near an ordinary character</li>
+      <li>A backspace seems to do nothing once</li>
+      <li>Code copied from a page or a chat refuses to compile</li>
+    </ul>
+    <p>Paste the text above and this page marks each one where it sits, then removes it.</p>
+
+    <h2>What this keeps by default</h2>
+    <p>Some invisible characters carry meaning, so they stay unless you turn on aggressive mode:</p>
+    <ul>
+      <li><code>U+200D</code> zero width joiner &mdash; holds emoji families together</li>
+      <li><code>U+200C</code> zero width non-joiner &mdash; needed for Persian, Arabic and Devanagari</li>
+      <li><code>U+FE0F</code> variation selector 16 &mdash; keeps emoji rendering as emoji</li>
+      <li>Regional indicator pairs (flags) and bidi marks in matched pairs</li>
+    </ul>
+
+    <h2>Is anything uploaded?</h2>
+    <p>No. There is no backend behind this page. The scan and the cleanup both run in this browser tab, and the text never leaves your device.</p>
+  </section>
+
+</main>
+<script src="/core.js"></script>
+<script src="/zwsp.js"></script>
+<!-- Cloudflare Web Analytics -->
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token":"20874485db814b21a0a76d82d7f9b4de"}'></script>
+</body>
+</html>
