@@ -402,3 +402,33 @@ td.name { min-width: 140px; }
   margin: 0 0 12px;
   font-size: 0.85rem;
 }
+
+/* ---------- json validity panel ---------- */
+
+.jsonstatus {
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin: 0 0 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.jsonstatus strong { font-size: 0.9rem; }
+.jsonstatus span { font-size: 0.8rem; }
+
+.jsonstatus.ok {
+  background: #f6ffed;
+  border: 1px solid #b7eb8f;
+  color: #237804;
+}
+
+.jsonstatus.ok span { color: #389e0d; }
+
+.jsonstatus.bad {
+  background: #fff1f0;
+  border: 1px solid #ffccc7;
+  color: #a8071a;
+}
+
+.jsonstatus.bad span { color: #a8071a; }
