@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Claude Watermark Remover — Remove Invisible Claude Text Watermarks Free</title>
+<meta name="description" content="Paste Claude output and strip invisible Unicode watermarks: zero-width characters, tag characters, private-use marks and hidden formatting. Free, no sign-up, runs entirely in your browser.">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<main>
+
+  <h1>Claude Watermark Remover</h1>
+
+  <section class="tool">
+
+    <div class="pane">
+      <label for="input">Paste Claude output</label>
+      <textarea id="input" spellcheck="false" placeholder="Paste text you got from Claude here..."></textarea>
+
+      <div class="row meta">
+        <input type="file" id="file" accept=".txt,.md,.markdown,.html,.htm,.csv,.json,.log,text/plain">
+        <span id="count">0 characters</span>
+      </div>
+
+      <fieldset>
+        <legend>Options</legend>
+
+        <label class="opt">
+          <span>Em dashes (&mdash; &#11834; &#11835;)</span>
+          <select id="emdash">
+            <option value="keep" selected>Keep</option>
+            <option value="replace">Replace with -</option>
+            <option value="remove">Remove</option>
+          </select>
+        </label>
+
+        <label class="opt check">
+          <input type="checkbox" id="spaces">
+          <span>Normalize exotic spaces (NBSP, thin, hair, figure)</span>
+        </label>
+
+        <label class="opt check">
+          <input type="checkbox" id="typography">
+          <span>Typography pass (curly quotes, ellipsis, en dash &rarr; plain ASCII)</span>
+        </label>
+
+        <label class="opt check">
+          <input type="checkbox" id="aggressive">
+          <span>Aggressive mode &mdash; also strip joiners, variation selectors, bidi marks</span>
+        </label>
+        <p class="warn">Aggressive mode can visibly change emoji, flags and right-to-left text. Off by default.</p>
+      </fieldset>
+
+      <div class="row">
+        <button id="run" class="primary" type="button">Remove watermark</button>
+        <button id="clear" type="button">Clear</button>
+      </div>
+    </div>
+
+    <div class="pane">
+      <label for="output">Cleaned text</label>
+      <textarea id="output" spellcheck="false" readonly placeholder="Cleaned text appears here."></textarea>
+
+      <div class="row">
+        <button id="copy" type="button">Copy</button>
+        <button id="download" type="button">Download .txt</button>
+        <span id="copied" class="copied" hidden>Copied</span>
+      </div>
+
+      <div id="report"></div>
+    </div>
+
+  </section>
+
+  <section>
+    <h2>What this removes</h2>
+    <p>Invisible Unicode characters that survive copy and paste out of Claude:</p>
+    <ul>
+      <li><code>U+200B</code> zero width space, <code>U+2060</code> word joiner, <code>U+FEFF</code> BOM</li>
+      <li><code>U+00AD</code> soft hyphen, <code>U+034F</code> combining grapheme joiner</li>
+      <li>Tag characters <code>U+E0001</code> and <code>U+E0020</code>&ndash;<code>U+E007F</code></li>
+      <li>Private use area: <code>U+E000</code>&ndash;<code>U+F8FF</code>, plane 15, plane 16</li>
+      <li>Interlinear annotation marks <code>U+FFF9</code>&ndash;<code>U+FFFB</code></li>
+    </ul>
+    <p>Optional passes handle em dashes, exotic spaces and curly punctuation. The report below the output box lists every codepoint it removed and how many.</p>
+
+    <h2>What this keeps by default</h2>
+    <p>Some invisible characters carry meaning. Removing them would damage your text, so they stay unless you turn on aggressive mode:</p>
+    <ul>
+      <li><code>U+200D</code> zero width joiner &mdash; holds emoji families together</li>
+      <li><code>U+200C</code> zero width non-joiner &mdash; needed for Persian, Arabic and Devanagari</li>
+      <li><code>U+FE0F</code> variation selector 16 &mdash; keeps emoji rendering as emoji</li>
+      <li>Regional indicator pairs (flags), Hangul jamo fillers, Mongolian free variation selectors, Khmer inherent vowels, Arabic and Syriac marks</li>
+      <li><code>U+200E</code> / <code>U+200F</code> and complete bidirectional embedding pairs</li>
+    </ul>
+
+    <h2>What this cannot remove</h2>
+    <p>Claude&rsquo;s text watermark has two separate layers. This tool only handles the first one.</p>
+    <p>The first layer is invisible characters. Those are listed above, they can be found and deleted deterministically, and this tool shows you exactly what it took out.</p>
+    <p>The second layer is a statistical pattern carried by word choice itself. It is not a character you can delete &mdash; it is the sequence of words Claude picked. Removing it means rewriting the wording, which is a different job. This page does not rewrite your sentences, so it does not touch that layer. We show no removal score and no &ldquo;percent human&rdquo; number, because a browser-side tool has no way to verify one, and a number nobody can check is just decoration.</p>
+
+    <h2>Supported input</h2>
+    <ul>
+      <li>Text pasted straight into the box</li>
+      <li>Uploaded files read as plain text: <code>.txt</code> <code>.md</code> <code>.markdown</code> <code>.html</code> <code>.htm</code> <code>.csv</code> <code>.json</code> <code>.log</code></li>
+    </ul>
+    <p>Not supported: PDF, Word <code>.docx</code>, Pages and image files. Stripping metadata out of those needs a parsing library or a server, and this page is a single static file that runs in your browser. Rather than pretend otherwise, the file picker does not accept them.</p>
+    <p>Nothing you paste is uploaded. The cleaning runs in this browser tab.</p>
+
+    <h2>How it works</h2>
+    <p>Your text is read one codepoint at a time. Each character is checked against the removal sets above, and against the keep list, which runs first &mdash; a character that matters for emoji or for a complex script is never removed in default mode. Everything deleted is counted by codepoint, and the counts are printed in the report so you can check the work instead of trusting it.</p>
+  </section>
+
+  <section>
+    <h2>FAQ</h2>
+
+    <h3>How do I remove a Claude watermark?</h3>
+    <p>Paste the text into the box above and press <em>Remove watermark</em>. The invisible characters come out, the report tells you which ones and how many, and you copy the cleaned text in one click.</p>
+
+    <h3>Is this Claude watermark remover free?</h3>
+    <p>Yes. Free, no sign-up, no account, no usage counter and no email wall. It is a single static page with no server behind it, so there is nothing to meter.</p>
+
+    <h3>Can I remove Claude watermarks on my phone?</h3>
+    <p>Yes. The page is one column on a narrow screen, the text boxes resize to the viewport, and the report table scrolls sideways instead of pushing the layout apart.</p>
+
+    <h3>Does it work on Claude Code output?</h3>
+    <p>Yes for the invisible-character layer. Code pasted out of Claude Code carries the same zero-width and tag characters as prose, and they corrupt search, JSON and diffs &mdash; removing them is worth doing on its own.</p>
+
+    <h3>Will this make my text undetectable by AI detectors?</h3>
+    <p>No, and any page promising that is guessing. This removes invisible characters. It does not rewrite your wording, so the statistical pattern in the word choice stays. If you need that changed, you need a rewrite, which is a different tool.</p>
+
+    <h3>Do you store what I paste?</h3>
+    <p>No. There is no backend and no analytics. The cleaning happens in this tab and the text never leaves your device.</p>
+
+    <h3>What is the difference between &ldquo;remove Claude watermark&rdquo; and &ldquo;Claude watermark remover&rdquo;?</h3>
+    <p>Same job, same page. People search it both ways, along with &ldquo;Claude watermark remover free&rdquo;. All of it lands here: paste text, strip the invisible marks, copy the result.</p>
+  </section>
+
+</main>
+<script src="script.js"></script>
+</body>
+</html>
