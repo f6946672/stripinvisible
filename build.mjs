@@ -3,7 +3,14 @@ import { join } from 'node:path';
 
 const SITE = 'https://stripinvisible.com';
 const OUT = 'dist';
-const ASSETS = ['index.html', 'styles.css', 'script.js', '404.html'];
+// IndexNow key file must be served at the root of the host, unchanged.
+const ASSETS = [
+  'index.html',
+  'styles.css',
+  'script.js',
+  '404.html',
+  'a6c064e32e8aa07aabe1847d5fa0e77f.txt',
+];
 
 mkdirSync(OUT, { recursive: true });
 
