@@ -3,7 +3,7 @@ import { join } from 'node:path';
 
 const SITE = 'https://stripinvisible.com';
 const OUT = 'dist';
-const ASSETS = ['index.html', 'styles.css', 'script.js'];
+const ASSETS = ['index.html', 'styles.css', 'script.js', '404.html'];
 
 mkdirSync(OUT, { recursive: true });
 
@@ -14,7 +14,7 @@ for (const f of ASSETS) {
 // Every .html in dist becomes a sitemap entry. Drop a new .html in and it
 // shows up on the next build without touching this file.
 const pages = readdirSync(OUT)
-  .filter((f) => f.endsWith('.html'))
+  .filter((f) => f.endsWith('.html') && f !== '404.html')
   .map((f) => (f === 'index.html' ? '/' : '/' + f))
   .sort((a, b) => (a === '/' ? -1 : b === '/' ? 1 : a.localeCompare(b)));
 
