@@ -280,6 +280,18 @@ li { margin: 4px 0; }
 
 .crosslink a { color: var(--accent); }
 
+/* ---------- byline ---------- */
+
+.sign {
+  margin: 24px 0 0;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.sign strong { color: var(--fg); font-weight: 600; }
+
 /* ---------- highlight preview ---------- */
 
 .hint {
