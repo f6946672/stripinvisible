@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>About — Strip Invisible</title>
+<meta name="description" content="What Strip Invisible is, why it exists, how the tools run, and how the site pays for itself.">
+<link rel="canonical" href="https://stripinvisible.com/about">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://stripinvisible.com/about">
+<meta property="og:title" content="About — Strip Invisible">
+<meta property="og:description" content="Six browser tools, one reference list, no uploads, no accounts.">
+<meta name="twitter:card" content="summary">
+<meta property="og:image" content="https://stripinvisible.com/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:image" content="https://stripinvisible.com/og-image.png">
+
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<main>
+
+  <nav class="crumbs" aria-label="Breadcrumb">
+    <a href="/">Strip Invisible</a> &rsaquo; <span>About</span>
+  </nav>
+
+  <h1>About</h1>
+
+  <p class="lede">Strip Invisible is a handful of small browser tools for one job: finding and removing
+    characters you cannot see.</p>
+
+  <h2>Why it exists</h2>
+  <p>Invisible characters survive copy and paste. They ride along from a chat window into a code
+    editor, a spreadsheet column, a JSON payload or a document, and then something breaks &mdash; a
+    parser refuses the file, a lookup returns nothing, a piece of text gets flagged as carrying an
+    AI watermark. The character is still there, it just does not show up on screen. Every tool on
+    this site is a different answer to the same problem: make the invisible visible, then take it
+    out.</p>
+
+  <h2>What is on the site</h2>
+  <ul>
+    <li><strong><a href="/">Claude watermark remover</a></strong> &mdash; the front page. Strips the
+      zero-width characters associated with Claude output and shows you where they were.</li>
+    <li><strong><a href="/zero-width-space">Zero-width space remover</a></strong> &mdash; the same
+      job as a standalone page, with the positions marked.</li>
+    <li><strong><a href="/clean-json">JSON cleaner</a></strong> &mdash; for a payload that will not
+      parse because of something you cannot see.</li>
+    <li><strong><a href="/clean-excel">Excel cell cleaner</a></strong> &mdash; for a spreadsheet
+      column where lookups silently fail.</li>
+    <li><strong><a href="/clean-word">Word and Docs cleaner</a></strong> &mdash; for text pasted out
+      of a document.</li>
+    <li><strong><a href="/compare-text">Text compare</a></strong> &mdash; puts two versions side by
+      side and shows what differs, including the parts that differ invisibly.</li>
+    <li><strong><a href="/invisible-characters">Invisible characters list</a></strong> &mdash; the
+      reference: which characters exist, their code points, and where they come from.</li>
+  </ul>
+
+  <h2>How the tools run</h2>
+  <p>Entirely in your browser. There is no upload step, no account, and no server processing your
+    text &mdash; the tool scripts contain no network requests at all, so the text you paste in has
+    nowhere to go. Close the tab and it is gone. That is also why the character tables work
+    offline once the page has loaded.</p>
+
+  <h2>How the site pays for itself</h2>
+  <p>Through advertising, eventually. Hosting is not free and neither is the domain, and the
+    alternative to ads is a paywall on something that takes one click to use. The
+    <a href="/privacy">privacy page</a> carries the current list of advertising partners, and today
+    that list reads <em>none</em> &mdash; it gets updated the moment a network is actually live on
+    the site, not before. Ads will not be given access to anything you type into a tool.</p>
+
+  <h2>What this site is not</h2>
+  <ul>
+    <li>Not an API and not a browser extension. There is no programmatic interface yet.</li>
+    <li>Not a service that remembers you. No accounts, no saved history, nothing written to your
+      browser's storage.</li>
+    <li>Not a general-purpose formatter. These tools remove invisible characters; they do not
+      rewrite, translate or proofread your text.</li>
+    <li>Not a claim about who wrote a piece of text. Removing a watermark character tells you the
+      character was there. It does not tell you anything about how the text was produced.</li>
+  </ul>
+
+  <h2>If something here is wrong</h2>
+  <p>That is worth an email. A character the tools miss, a tool that misbehaves, or a sentence on
+    this site that is out of date &mdash; all of it is a bug, and the address is on the
+    <a href="/contact">contact page</a>.</p>
+
+  <footer class="foot">
+    <a href="/about">About</a> &middot; <a href="/privacy">Privacy</a> &middot; <a href="/contact">Contact</a> &middot; <a href="https://github.com/f6946672/stripinvisible/blob/main/about.html">Source</a>
+  </footer>
+</main>
+</body>
+</html>
