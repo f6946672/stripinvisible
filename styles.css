@@ -255,9 +255,20 @@ button.primary:hover { filter: brightness(1.06); }
 
 /* ---------- content ---------- */
 
-section > ul { padding-left: 20px; }
+main > ul, section > ul { padding-left: 20px; }
 
 li { margin: 4px 0; }
+
+.lede { font-size: 1.02rem; }
+
+.bigmail { margin: 4px 0 18px; }
+
+.bigmail a {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 1.1rem;
+  font-weight: 600;
+  word-break: break-all;
+}
 
 /* ---------- cross links ---------- */
 
@@ -370,6 +381,21 @@ td.cp {
 }
 
 td.name { min-width: 140px; }
+
+/* 窄屏：让参照表在手机宽度内放得下，不再需要横向拖 */
+@media (max-width: 560px) {
+  table { font-size: 0.72rem; }
+  th, td { padding: 5px 5px; }
+  td.name { min-width: 0; }
+  th { white-space: normal; }
+}
+
+@media (max-width: 400px) {
+  table { font-size: 0.66rem; }
+  th, td { padding: 4px 3px; overflow-wrap: anywhere; word-break: break-word; }
+  td.cp { font-size: 0.64rem; }
+  .ent { font-size: 0.66rem; }
+}
 
 .ent {
   color: var(--muted);
