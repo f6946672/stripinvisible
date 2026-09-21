@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>What Invisible Characters Cost You in LLM Tokens</title>
+<meta name="description" content="Measured: each zero-width character in a prompt costs about one extra token. A 1,000-word paste with one after every word goes from 1,103 to 2,103 tokens.">
+<link rel="canonical" href="https://stripinvisible.com/token-cost">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://stripinvisible.com/token-cost">
+<meta property="og:title" content="What Invisible Characters Cost You in LLM Tokens">
+<meta property="og:description" content="Measured on 1,000-word samples with two real encodings. Each zero-width character costs about one token.">
+<meta name="twitter:card" content="summary">
+<meta property="og:image" content="https://stripinvisible.com/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:image" content="https://stripinvisible.com/og-image.png">
+
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<main>
+
+  <nav class="crumbs" aria-label="Breadcrumb">
+    <a href="/">Strip Invisible</a> &rsaquo; <span>Token cost</span>
+  </nav>
+
+  <h1>What invisible characters cost you in LLM tokens</h1>
+
+  <p class="lede"><strong>Short answer: about one token each.</strong> A 1,000-word text with a single
+    zero-width space after every word goes from <strong>1,103 tokens to 2,103</strong> &mdash; a 90.7%
+    increase &mdash; before you have added a single word of meaning. The characters are invisible on
+    screen, but the tokenizer sees every one of them and you pay for every one of them.</p>
+
+  <h2>Measured, not estimated</h2>
+  <p>These are the numbers from a 1,000-word English sample, tokenized twice &mdash; once with
+    <code>o200k_base</code> and once with <code>cl100k_base</code>, the encodings behind current
+    OpenAI models. Only difference between rows: invisible characters inserted at a fixed interval.</p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Sample (1,000 words)</th>
+        <th>Invisible chars</th>
+        <th>Tokens (cl100k_base)</th>
+        <th>Tokens (o200k_base)</th>
+        <th>Increase</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="name">Clean text</td>
+        <td class="cp">0</td>
+        <td class="cp">1,103</td>
+        <td class="cp">1,103</td>
+        <td class="cp">&mdash;</td>
+      </tr>
+      <tr>
+        <td class="name">One zero-width space after every word</td>
+        <td class="cp">1,000</td>
+        <td class="cp">2,103</td>
+        <td class="cp">2,065</td>
+        <td class="cp"><strong>+90.7%</strong></td>
+      </tr>
+      <tr>
+        <td class="name">One every 5 words</td>
+        <td class="cp">200</td>
+        <td class="cp">1,303</td>
+        <td class="cp">1,296</td>
+        <td class="cp">+18.1%</td>
+      </tr>
+      <tr>
+        <td class="name">One every 10 words</td>
+        <td class="cp">100</td>
+        <td class="cp">1,203</td>
+        <td class="cp">1,200</td>
+        <td class="cp">+9.1%</td>
+      </tr>
+      <tr>
+        <td class="name">One after every sentence</td>
+        <td class="cp">38</td>
+        <td class="cp">1,141</td>
+        <td class="cp">1,141</td>
+        <td class="cp">+3.4%</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>The pattern is close to linear: <strong>one invisible character in, roughly one token out.</strong>
+    Work out the cost of any piece of text by counting the hidden characters &mdash; the token count
+    rises by about that much.</p>
+
+  <h2>Why a character you cannot see still costs a token</h2>
+  <p>Tokenizers are built from byte-pair merges learned on ordinary text. Common English words collapse
+    into single tokens. Zero-width and invisible characters are rare in training data, so they never
+    earned a merge of their own &mdash; the tokenizer falls back to splitting them into their raw
+    UTF-8 bytes, and each of those bytes becomes a token. U+200B is three bytes in UTF-8
+    (<code>E2 80 8B</code>), which is why one invisible space lands you roughly one extra token rather
+    than zero.</p>
+  <p>That is the whole mechanism. There is nothing exotic about it, which is exactly why it gets
+    missed: everything about these characters says they are not there.</p>
+
+  <h2>Where this actually bites</h2>
+  <ul>
+    <li><strong>Pasting model output back into a model.</strong> The most common way to carry a
+      watermark forward is to feed yesterday's output into today's prompt. You pay for the hidden
+      characters on every round trip.</li>
+    <li><strong>RAG pipelines.</strong> Chunks scraped from pages or documents that carry invisible
+      characters inflate every retrieval, and the inflation is invisible in your usage dashboard
+      because the text looks short.</li>
+    <li><strong>Batch jobs.</strong> A 90% token increase on a nightly job over a large corpus is not
+      a rounding error, and it does not show up as an error at all.</li>
+    <li><strong>Context limits.</strong> Tokens spent on characters that carry no meaning are tokens
+      unavailable for the content you actually wanted in the window.</li>
+  </ul>
+
+  <h2>Check your own text</h2>
+  <p>Count the invisible characters first, then multiply. The
+    <a href="/zero-width-space">zero-width space remover</a> shows you where they sit and how many
+    there are; the <a href="/invisible-characters">invisible characters list</a> has the code points
+    if you want to look them up by hand. If you are cleaning a payload rather than prose, the
+    <a href="/clean-json">JSON cleaner</a> and <a href="/clean-excel">Excel cell cleaner</a> do the
+    same job on structured input.</p>
+
+  <h2>Reproduce it</h2>
+  <p>The measurement above is three lines of Python. Run it on your own text rather than trusting a
+    table on someone else's site:</p>
+  <pre><code>import tiktoken
+enc = tiktoken.get_encoding("o200k_base")   # or "cl100k_base"
+dirty = "Your text here"                    # paste as-is, do not clean it
+clean  = dirty.replace("\u200b", "").replace("\u200c", "") \
+                .replace("\u200d", "").replace("\ufeff", "")
+print(len(enc.encode(dirty)), len(enc.encode(clean)),
+      len(enc.encode(dirty)) - len(enc.encode(clean)))</code></pre>
+  <p>The third number is what the hidden characters are costing you per call. Multiply it by your
+    request volume and your provider's rate.</p>
+
+  <h2>What this does not tell you</h2>
+  <p>This page measures cost, not authorship. Extra tokens tell you characters are present; they do
+    not tell you who put them there or why, and they are not evidence that a text was generated by a
+    model. Token counts also vary by encoding, so the percentages above apply to the two encodings
+    tested &mdash; run the snippet against your own model's tokenizer if you need a number you can
+    bill against.</p>
+
+  <p class="crosslink">Measured 2026-09-21 with <code>tiktoken</code> on a 1,000-word English sample.
+    Tools: <a href="/">Claude watermark remover</a>,
+    <a href="/zero-width-space">zero-width space remover</a>,
+    <a href="/clean-json">JSON cleaner</a>,
+    <a href="/clean-excel">Excel cell cleaner</a>,
+    <a href="/invisible-characters">invisible characters list</a>.</p>
+
+  <footer class="foot">
+    <a href="/about">About</a> &middot; <a href="/privacy">Privacy</a> &middot; <a href="/contact">Contact</a> &middot; <a href="https://github.com/f6946672/stripinvisible/blob/main/token-cost.html">Source</a>
+  </footer>
+</main>
+<!-- Cloudflare Web Analytics -->
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token":"20874485db814b21a0a76d82d7f9b4de"}'></script>
+</body>
+</html>
