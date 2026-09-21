@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>U+2028 and U+2029 in JSON and JavaScript: What Actually Breaks</title>
+<meta name="description" content="Measured on Node 22, Chromium and Python 3.13: JSON.parse handles U+2028 and U+2029 fine. What differs is the serializers, and inside JavaScript source these two still count as line terminators.">
+<link rel="canonical" href="https://stripinvisible.com/line-separators">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://stripinvisible.com/line-separators">
+<meta property="og:title" content="U+2028 and U+2029 in JSON and JavaScript: What Actually Breaks">
+<meta property="og:description" content="Parsers are fine. Serializers disagree. Inside JS source these two characters still end a line.">
+<meta name="twitter:card" content="summary">
+<meta property="og:image" content="https://stripinvisible.com/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:image" content="https://stripinvisible.com/og-image.png">
+
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<main>
+
+  <nav class="crumbs" aria-label="Breadcrumb">
+    <a href="/">Strip Invisible</a> &rsaquo; <span>Line separators</span>
+  </nav>
+
+  <h1>U+2028 and U+2029 in JSON and JavaScript: what actually breaks</h1>
+
+  <p class="lede"><strong>JSON.parse does not break.</strong> Measured on Node 22, current Chromium
+    and Python 3.13: a raw U+2028 or U+2029 inside a JSON string parses cleanly in all three. What
+    actually differs is the <em>serializers</em> &mdash; JavaScript writes these characters out raw,
+    Python escapes them. And inside JavaScript source code, both characters still count as line
+    terminators, which is where the real bugs come from.</p>
+
+  <h2>Measured, one row at a time</h2>
+  <p>Each row is a single expression evaluated on Node 22. <code>U+2028</code> is the line separator,
+    <code>U+2029</code> the paragraph separator; both are invisible on screen.</p>
+
+  <table>
+    <thead>
+      <tr><th>Where the character sits</th><th>Result</th></tr>
+    </thead>
+    <tbody>
+      <tr><td class="name">Inside a JSON string, parsed with <code>JSON.parse</code></td><td class="cp">OK &mdash; parses fine</td></tr>
+      <tr><td class="name">Inside a JS string literal (<code>"x&#8232;y"</code>)</td><td class="cp">OK</td></tr>
+      <tr><td class="name">Inside a template literal</td><td class="cp">OK</td></tr>
+      <tr><td class="name">Between two statements, acting as whitespace</td><td class="cp">OK</td></tr>
+      <tr><td class="name">Inside a <code>//</code> comment, with code after it</td><td class="cp"><strong>Ends the comment</strong> &mdash; the code after it runs</td></tr>
+      <tr><td class="name">Inside a regex literal</td><td class="cp"><strong>SyntaxError</strong>: Invalid regular expression</td></tr>
+    </tbody>
+  </table>
+
+  <p>The last two rows are the ones that bite. A U+2028 inside a line comment terminates the comment,
+    so whatever was meant to be commented out starts executing. A U+2028 inside a regex literal stops
+    the literal from parsing at all. Neither of these looks like anything when you read the file,
+    because the character has no width.</p>
+
+  <h2>The serializers disagree</h2>
+  <p>This is the part that catches people out across language boundaries. Same object, two languages:</p>
+  <pre><code>// JavaScript, Node 22
+JSON.stringify({a: "x&#8232;y"})
+// -&gt; {"a":"x&#8232;y"}         raw character, NOT escaped
+
+# Python 3.13
+json.dumps({"a": "x&#8232;y"})
+# -&gt; {"a": "x\u2028y"}         escaped</code></pre>
+  <p>Python escapes them; JavaScript does not. So JSON produced by a JS service carries the raw
+    character across the wire, while JSON produced by a Python service carries a six-character escape
+    sequence. Both parse fine on the receiving end &mdash; until the payload is pasted into a
+    JavaScript file instead of parsed, and the line-terminator behaviour above takes over.</p>
+
+  <h2>The one-line fix when you generate JS from data</h2>
+  <p>If you are writing JSON into a <code>&lt;script&gt;</code> tag or building JavaScript source from
+    data, escape these two characters explicitly. <code>JSON.stringify</code> will not do it for you:</p>
+  <pre><code>const safe = JSON.stringify(data)
+  .replace(/\u2028/g, "\\u2028")
+  .replace(/\u2029/g, "\\u2029");</code></pre>
+  <p>The output still parses to the same value &mdash; verified by round-tripping it back through
+    <code>JSON.parse</code> &mdash; but it now survives being pasted into source code.</p>
+
+  <h2>Checking whether you have them</h2>
+  <p>Both characters are invisible, so the only way to know is to look. The
+    <a href="/zero-width-space">zero-width space remover</a> shows you where invisible characters sit
+    in a block of text, and the <a href="/invisible-characters">invisible characters list</a> has the
+    code points. For a payload that will not parse at all, start with the
+    <a href="/clean-json">JSON cleaner</a>.</p>
+
+  <h2>What this page does not claim</h2>
+  <p>These measurements come from Node 22, current Chromium and Python 3.13 &mdash; the runtimes
+    available here. Older JavaScript engines treated U+2028 and U+2029 as line terminators everywhere,
+    including inside string literals, which is where this character's reputation comes from; that was
+    relaxed in ES2019, and I could not test pre-2019 engines on this machine, so this page makes no
+    claim about them. Run the snippets above against the runtimes you actually ship to.</p>
+
+  <p class="crosslink">Measured 2026-09-21 on Node 22.22, Chromium (Playwright) and Python 3.13.
+    Tools: <a href="/">Claude watermark remover</a>,
+    <a href="/zero-width-space">zero-width space remover</a>,
+    <a href="/clean-json">JSON cleaner</a>,
+    <a href="/invisible-characters">invisible characters list</a>,
+    <a href="/token-cost">what they cost in tokens</a>.</p>
+
+  <footer class="foot">
+    <a href="/about">About</a> &middot; <a href="/privacy">Privacy</a> &middot; <a href="/contact">Contact</a> &middot; <a href="https://github.com/f6946672/stripinvisible/blob/main/line-separators.html">Source</a>
+  </footer>
+</main>
+<!-- Cloudflare Web Analytics -->
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token":"20874485db814b21a0a76d82d7f9b4de"}'></script>
+</body>
+</html>
