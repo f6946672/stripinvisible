@@ -18,8 +18,8 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--fg);
-  font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  padding: 16px;
+  font: 17px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  padding: 20px;
 }
 
 main {
@@ -28,10 +28,11 @@ main {
 }
 
 h1 {
-  font-size: 1.5rem;
-  line-height: 1.25;
-  margin: 0 0 16px;
-  letter-spacing: -0.01em;
+  font-size: 1.9rem;
+  line-height: 1.2;
+  margin: 0 0 14px;
+  letter-spacing: -0.015em;
+  font-weight: 650;
 }
 
 h2 {
@@ -47,6 +48,9 @@ h3 {
 }
 
 p, li { color: #26292f; }
+
+main p { line-height: 1.7; margin: 0 0 18px; }
+main li { margin: 6px 0; }
 
 code {
   background: var(--panel);
@@ -89,15 +93,21 @@ pre code {
 .tool {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 16px;
+  gap: 18px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-top: 3px solid var(--accent);
+  border-radius: 8px;
+  padding: 20px;
+  margin: 8px 0 24px;
+  box-shadow: 0 1px 2px rgba(20, 22, 26, 0.04);
 }
 
 @media (min-width: 860px) {
-  .tool { grid-template-columns: 1fr 1fr; }
+  .tool { grid-template-columns: 1fr 1fr; padding: 24px; }
 }
 
 .pane {
-  background: var(--panel);
   border: 1px solid var(--line);
   border-radius: 10px;
   padding: 12px;
@@ -285,7 +295,7 @@ main > ul, section > ul { padding-left: 20px; }
 
 li { margin: 4px 0; }
 
-.lede { font-size: 1.02rem; }
+.lede { font-size: 1.08rem; line-height: 1.65; color: #2a2e36; margin: 0 0 18px; }
 
 .bigmail { margin: 4px 0 18px; }
 
