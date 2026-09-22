@@ -1,0 +1,367 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Unicode Tag Characters (U+E0000–U+E007F): Invisible Text Nothing Cleans</title>
+<meta name="description" content="Measured: U+E0020–U+E007F are 95 invisible characters that spell the whole printable ASCII range. A 20-character hidden message renders 0 px wide, survives NFC/NFKC, survives every zero-width cleaner, and costs 81 tokens instead of 6.">
+<link rel="canonical" href="https://stripinvisible.com/tag-characters">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://stripinvisible.com/tag-characters">
+<meta property="og:title" content="Unicode Tag Characters (U+E0000–U+E007F): Invisible Text Nothing Cleans">
+<meta property="og:description" content="Measured on this machine: 0 px rendered width, survives Unicode normalization, missed by zero-width cleaners, 4 tokens each in o200k_base.">
+<meta name="twitter:card" content="summary">
+<meta property="og:image" content="https://stripinvisible.com/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:image" content="https://stripinvisible.com/og-image.png">
+
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<main>
+
+  <nav class="crumbs" aria-label="Breadcrumb">
+    <a href="/">Strip Invisible</a> &rsaquo; <span>Tag characters</span>
+  </nav>
+
+  <h1>Unicode tag characters: an invisible copy of the ASCII alphabet</h1>
+
+  <p class="lede"><strong>Short answer: U+E0020 to U+E007F are 95 invisible characters that mirror
+    printable ASCII, one for one.</strong> Anything you can type in ASCII you can hide inside a
+    sentence where no one sees it. Measured here: hiding the 20-character string
+    <code>confidential-draft-v7</code> in a normal-looking line renders <strong>0 px wide</strong> in
+    Chromium, <strong>survives all four Unicode normalization forms</strong>, survives every
+    zero-width cleaner we threw at it, and costs <strong>81 tokens instead of 6</strong> once it
+    reaches a tokenizer. The 21-character payload also turns an 18-character line into a
+    <strong>39 code point, 102 byte</strong> string that still looks like
+    <code>Board report final</code>. It is not a glitch in one tool &mdash; it is a second alphabet that happens
+    to have no glyphs.</p>
+
+  <h2>What the block actually contains</h2>
+  <p>The names are the giveaway. Read them straight out of the Unicode database (Python 3.13,
+    <code>unicodedata</code> 15.1.0):</p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Code point</th>
+        <th>Unicode name</th>
+        <th>Category</th>
+        <th>UTF-8</th>
+        <th>UTF-16</th>
+        <th>Printable?</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="name">U+E0000</td>
+        <td class="cp">&mdash; unassigned, no name &mdash;</td>
+        <td class="cp">Cn</td>
+        <td class="cp">4 bytes</td>
+        <td class="cp">2 units</td>
+        <td class="cp">No</td>
+      </tr>
+      <tr>
+        <td class="name">U+E0001</td>
+        <td class="cp">LANGUAGE TAG</td>
+        <td class="cp">Cf</td>
+        <td class="cp">4 bytes</td>
+        <td class="cp">2 units</td>
+        <td class="cp">No</td>
+      </tr>
+      <tr>
+        <td class="name">U+E0020</td>
+        <td class="cp">TAG SPACE</td>
+        <td class="cp">Cf</td>
+        <td class="cp">4 bytes</td>
+        <td class="cp">2 units</td>
+        <td class="cp">No</td>
+      </tr>
+      <tr>
+        <td class="name">U+E0041</td>
+        <td class="cp">TAG LATIN CAPITAL LETTER A</td>
+        <td class="cp">Cf</td>
+        <td class="cp">4 bytes</td>
+        <td class="cp">2 units</td>
+        <td class="cp">No</td>
+      </tr>
+      <tr>
+        <td class="name">U+E0061</td>
+        <td class="cp">TAG LATIN SMALL LETTER A</td>
+        <td class="cp">Cf</td>
+        <td class="cp">4 bytes</td>
+        <td class="cp">2 units</td>
+        <td class="cp">No</td>
+      </tr>
+      <tr>
+        <td class="name">U+E007E</td>
+        <td class="cp">TAG TILDE</td>
+        <td class="cp">Cf</td>
+        <td class="cp">4 bytes</td>
+        <td class="cp">2 units</td>
+        <td class="cp">No</td>
+      </tr>
+      <tr>
+        <td class="name">U+E007F</td>
+        <td class="cp">CANCEL TAG</td>
+        <td class="cp">Cf</td>
+        <td class="cp">4 bytes</td>
+        <td class="cp">2 units</td>
+        <td class="cp">No</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>The block was defined to carry language tags, and its characters are named for the ASCII
+    characters they sit at: <code>U+E0000 + n</code> is the tag form of ASCII character
+    <code>n</code>. It never entered general use, which is exactly why it is useful for hiding
+    things: a character that is in the standard, valid in a string, and has no glyph is a very good
+    place to put a message.</p>
+
+  <h2>Hiding a message takes four lines</h2>
+  <p>Add 0xE0000 to each ASCII code point and you have invisible text. Subtract it and you have the
+    message back:</p>
+
+  <pre><code># Python 3 - verified output shown below
+msg    = "confidential-draft-v7"
+hidden = "".join(chr(0xE0000 + ord(c)) for c in msg)
+carrier = "Board report" + hidden + " final"
+
+print(len(carrier))                # 39  - code points
+print(len(carrier.encode()))       # 102 - UTF-8 bytes
+print(len("Board report final"))   # 18  - what the reader actually sees
+print(len(hidden.encode()))        # 84  - the payload alone, 4 bytes per character
+
+# recovery from a round trip through a file
+back = open("out.txt", encoding="utf-8").read()
+"".join(chr(ord(c) - 0xE0000) for c in back if 0xE0000 &lt;= ord(c) &lt;= 0xE007F)
+# -&gt; 'confidential-draft-v7'</code></pre>
+
+  <p>The same thing in JavaScript, where the length surprise is bigger because each tag character is
+    a surrogate pair:</p>
+
+  <pre><code>const hidden = [...msg].map(c =&gt; String.fromCodePoint(0xE0000 + c.codePointAt(0))).join("");
+const carrier = "Board report" + hidden + " final";
+carrier.length;                 // 60  UTF-16 code units
+[...carrier].length;            // 39  code points
+new TextEncoder().encode(carrier).length;  // 102 bytes
+
+[...carrier]
+  .filter(c =&gt; /[\u{E0000}-\u{E007F}]/u.test(c))
+  .map(c =&gt; String.fromCodePoint(c.codePointAt(0) - 0xE0000))
+  .join("");                    // 'confidential-draft-v7'</code></pre>
+
+  <p>A textarea holding a shorter version of the same trick &mdash; <code>Report</code> + four
+    hidden characters + <code>final</code> &mdash; reports <strong>19</strong> characters where
+    <strong>11</strong> are visible, and the payload survives a full
+    <code>JSON.parse(JSON.stringify())</code> round trip unchanged.</p>
+
+  <h2>What it costs when the text reaches a model</h2>
+  <p>Tag characters sit in the supplementary plane, so each one is four UTF-8 bytes and the
+    tokenizer has no merge for it. Measured with <code>tiktoken</code>, both encodings:</p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Hidden payload</th>
+        <th>Plain tokens</th>
+        <th>Tag-encoded (o200k_base)</th>
+        <th>Tag-encoded (cl100k_base)</th>
+        <th>Bytes added</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="name"><code>ACME-Q3</code> (7 chars)</td>
+        <td class="cp">4</td>
+        <td class="cp"><strong>26</strong></td>
+        <td class="cp">21</td>
+        <td class="cp">28</td>
+      </tr>
+      <tr>
+        <td class="name"><code>confidential-draft-v7</code> (21 chars)</td>
+        <td class="cp">6</td>
+        <td class="cp"><strong>81</strong></td>
+        <td class="cp">63</td>
+        <td class="cp">84</td>
+      </tr>
+      <tr>
+        <td class="name">50 repeated characters</td>
+        <td class="cp">7</td>
+        <td class="cp"><strong>200</strong></td>
+        <td class="cp">150</td>
+        <td class="cp">200</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>The per-character rate is flat: <strong>4 tokens per tag character in o200k_base, 3 in
+    cl100k_base</strong>, measured at 1, 2, 4, 8 and 16 characters. That is roughly four times what a
+    zero-width space costs, because a zero-width space is three UTF-8 bytes and a tag character is
+    four, and neither has a merge. A 10-word sentence with one tag character after each space went
+    from 11 tokens to 56 &mdash; nine invisible characters, 45 extra tokens.</p>
+
+  <h2>Measured: nothing catches it</h2>
+  <p>This is the part that matters. Every row below was run on this machine, not assumed:</p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Operation</th>
+        <th>Tag characters removed?</th>
+        <th>Measured result</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="name">Unicode NFC / NFD / NFKC / NFKD</td>
+        <td class="cp"><strong>No</strong></td>
+        <td class="cp">3 tag characters in, 3 out, in all four forms</td>
+      </tr>
+      <tr>
+        <td class="name">Removing the 11 usual invisible code points</td>
+        <td class="cp"><strong>No</strong></td>
+        <td class="cp">U+200B, U+200C, U+200D, U+2060, U+FEFF, U+00AD, U+180E and friends all removed; tags untouched</td>
+      </tr>
+      <tr>
+        <td class="name"><code>\s</code> in a regex (Python and JS)</td>
+        <td class="cp">No match at all</td>
+        <td class="cp"><code>isspace()</code> false, <code>/\s/</code> false</td>
+      </tr>
+      <tr>
+        <td class="name"><code>trim()</code> / <code>str.strip()</code></td>
+        <td class="cp"><strong>No</strong></td>
+        <td class="cp">They are not whitespace, so trimming leaves them</td>
+      </tr>
+      <tr>
+        <td class="name"><code>JSON.stringify</code>, then <code>JSON.parse</code></td>
+        <td class="cp"><strong>No</strong></td>
+        <td class="cp">Round trip is byte-identical; Python <code>json.dumps</code> writes them as <code>\udb40\udc41</code> surrogate escapes and they come back intact</td>
+      </tr>
+      <tr>
+        <td class="name"><code>/[^\x20-\x7E]/g</code> (strip everything non-ASCII)</td>
+        <td class="cp">Yes</td>
+        <td class="cp">The only one of these that works &mdash; and it destroys every accented letter too</td>
+      </tr>
+      <tr>
+        <td class="name">Whitelist-free comparison: <code>localeCompare</code></td>
+        <td class="cp">Collapses them</td>
+        <td class="cp"><code>"ACME".localeCompare("ACME" + tag)</code> returns <code>0</code>, while <code>===</code> says <code>false</code></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>That last row is the quiet one. Collation ignores format characters, so a database uniqueness
+    check or a de-duplication pass can treat two different strings as the same while application
+    code treats them as different. Which behaviour you get depends on which layer you are standing
+    on.</p>
+
+  <h2>Measured: it renders at zero width</h2>
+  <p>Rendered in Chromium 153 at 16 px, measured two ways &mdash; element box width and canvas
+    <code>measureText</code>:</p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Content</th>
+        <th>Rendered width</th>
+        <th>Characters actually present</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="name">Empty span</td>
+        <td class="cp">0.00 px</td>
+        <td class="cp">0</td>
+      </tr>
+      <tr>
+        <td class="name">One tag character</td>
+        <td class="cp">0.00 px</td>
+        <td class="cp">1</td>
+      </tr>
+      <tr>
+        <td class="name">Five tag characters</td>
+        <td class="cp">0.00 px</td>
+        <td class="cp">5</td>
+      </tr>
+      <tr>
+        <td class="name">One hundred tag characters</td>
+        <td class="cp">0.00 px</td>
+        <td class="cp">100</td>
+      </tr>
+      <tr>
+        <td class="name">The letter <code>A</code> (baseline)</td>
+        <td class="cp">10.32 px</td>
+        <td class="cp">1</td>
+      </tr>
+      <tr>
+        <td class="name"><code>Report</code> + 5 tags + <code>final</code></td>
+        <td class="cp">77.19 px</td>
+        <td class="cp">16 (11 visible)</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>A hundred invisible characters and the line does not move by a single pixel. There is no
+    tofu box, no dotted placeholder, nothing to give it away on screen.</p>
+
+  <h2>Measured: form fields accept it</h2>
+  <p>Typed into real inputs in Chromium (not set programmatically):</p>
+  <ul>
+    <li>A <code>required</code> field containing only two tag characters <strong>passes
+      validation</strong> &mdash; <code>checkValidity()</code> returns <code>true</code> while the
+      same field left empty returns <code>false</code>. <code>value.length</code> is 4 because each
+      character is two UTF-16 units, and <code>value.trim()</code> is not empty.</li>
+    <li>A field with <code>maxlength="5"</code> accepted only <strong>2</strong> tag characters: the
+      limit counts UTF-16 code units, not what a person would count as characters.</li>
+  </ul>
+  <p>So "the field is not empty" is true, "the field has content" is false, and both are correct
+    depending on which question you asked.</p>
+
+  <h2>Find and remove them</h2>
+  <p>The range is small and precise, so the fix is a single character class:</p>
+
+  <pre><code>// JavaScript - count them
+const count = (s) =&gt; (s.match(/[\u{E0000}-\u{E007F}]/gu) || []).length;
+// remove them (and every other format character, if you want the whole class)
+const clean = s =&gt; s.replace(/[\u{E0000}-\u{E007F}]/gu, "");</code></pre>
+
+  <pre><code># Python - count and remove
+TAG = re.compile(r"[\U000E0000-\U000E007F]")
+print(len(TAG.findall(text)))
+clean = TAG.sub("", text)</code></pre>
+
+  <p>If you would rather not run the regex yourself, the
+    <a href="/">Claude watermark remover</a> on the home page flags U+E0001 and U+E0020–U+E007F and
+    strips them; the <a href="/zero-width-space">zero-width space remover</a> shows you where each
+    invisible character sits in the string, and the <a href="/invisible-characters">invisible
+    characters list</a> has the rest of the code points by name. For payloads rather than prose, the
+    <a href="/clean-json">JSON cleaner</a> and <a href="/clean-excel">Excel cell cleaner</a> do the
+    same job on structured input.</p>
+
+  <h2>What this page does not tell you</h2>
+  <p>Finding tag characters tells you they are there. It does not tell you who put them there, and
+    it is not evidence that a text was produced by any particular model or tool &mdash; the block has
+    legitimate uses in the standard, and a stray one can come from a bad conversion. The rendering,
+    validation and length figures above were measured in Chromium 153 on Windows; other engines
+    count code units the same way, but check before you rely on a number in production.</p>
+
+  <p class="crosslink">Measured 2026-09-22 with Python 3.13 (<code>unicodedata</code> 15.1.0),
+    <code>tiktoken</code> o200k_base and cl100k_base, Node 22 and Chromium 153 via Playwright.
+    Related: <a href="/token-cost">what invisible characters cost you in tokens</a>,
+    <a href="/line-separators">U+2028 and U+2029 in JSON</a>,
+    <a href="/zero-width-space">zero-width space remover</a>,
+    <a href="/invisible-characters">invisible characters list</a>,
+    <a href="/clean-json">JSON cleaner</a>,
+    <a href="/clean-excel">Excel cell cleaner</a>.</p>
+
+  <footer class="foot">
+    <a href="/about">About</a> &middot; <a href="/privacy">Privacy</a> &middot; <a href="/contact">Contact</a> &middot; <a href="https://github.com/f6946672/stripinvisible/blob/main/tag-characters.html">Source</a>
+  </footer>
+</main>
+<!-- Cloudflare Web Analytics -->
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token":"20874485db814b21a0a76d82d7f9b4de"}'></script>
+</body>
+</html>
