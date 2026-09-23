@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Invisible Unicode Characters — The Complete List</title>
-<meta name="description" content="Every invisible Unicode character in one place: zero width space U+200B, word joiner U+2060, BOM U+FEFF, soft hyphen U+00AD, tag characters, variation selectors and private use marks. What each one does, and whether it is safe to delete.">
+<meta name="description" content="Copy an invisible character in one click, or read the full list: zero width space U+200B, no-break space U+00A0, word joiner U+2060, BOM U+FEFF, soft hyphen U+00AD, tag characters, variation selectors and private use marks. What each one does, and whether it is safe to delete.">
 <link rel="canonical" href="https://stripinvisible.com/invisible-characters">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://stripinvisible.com/invisible-characters">
@@ -48,6 +48,16 @@
 
   <h1>Invisible Unicode Characters: The Complete List</h1>
 
+  <div class="grab">
+    <p class="grablead">One click puts the character on your clipboard. Nothing to select, nothing
+      to download &mdash; press the button, then paste it where you need it.</p>
+    <div class="grabrow">
+      <button class="grabbtn primary" type="button" data-cp="8203" data-label="U+200B zero width space">Copy invisible character <span class="grabcp">U+200B</span></button>
+      <button class="grabbtn" type="button" data-cp="160" data-label="U+00A0 no-break space">Copy blank space <span class="grabcp">U+00A0</span></button>
+      <button class="grabbtn" type="button" data-cp="8288" data-label="U+2060 word joiner">Copy word joiner <span class="grabcp">U+2060</span></button>
+    </div>
+  </div>
+
   <p class="crosslink">Want them out of your text instead of reading about them? Use the
     <a href="/zero-width-space">zero-width space remover</a>, the
     <a href="/">Claude watermark remover</a>, the
@@ -63,7 +73,33 @@
 
   <p>Every character below is listed with what it actually does and whether deleting it is safe.
     The copy button puts the character itself on your clipboard, which is handy when you need one
-    to test with.</p>
+    to test with. Everything on this page is standard invisible Unicode &mdash; no font trick, no
+    image, nothing to install.</p>
+
+  <h2>What you just copied</h2>
+  <p>If you searched for <strong>invisible character copy and paste</strong>, the button at the top
+    is the whole answer: U+200B has no width, prints nothing, and survives the trip through the
+    clipboard into almost any input box. It is one codepoint, not a trick.</p>
+  <p>The same codepoint is what most people mean by <strong>invisible text copy</strong>: a string
+    built out of characters that render as nothing. A field holding only those is empty to look at
+    and not empty to the software reading it, which is why some forms accept it and others hand it
+    back. Nothing about the character predicts which &mdash; paste it and see.</p>
+  <p>Where <strong>invisible text copy and paste</strong> usually goes wrong is length, not the
+    character. A single one tucked inside a word is invisible and harmless. A long run of them in a
+    field that is supposed to be blank reads as noise to anything checking that field, because to
+    it the field is not empty &mdash; it is full of something it cannot display.</p>
+
+  <h2>There is no invisible font</h2>
+  <p>Searches for an <strong>invisible font</strong> start from a sensible guess: somewhere out
+    there is a typeface that draws nothing. Fonts do not work that way. A font maps each character
+    to a glyph, and a character whose glyph happens to be blank is still a character &mdash; it
+    still counts toward the length of your string, it still gets copied, and it still shows up in a
+    diff. What those generators actually do is swap in invisible characters, not switch
+    typeface.</p>
+  <p>That distinction is worth keeping, because a generator hands you characters you did not pick
+    and cannot see, and some of those carry meaning. The joiner at U+200D is what holds an emoji
+    family together as one picture; deleting it changes what people see. Copying from the table
+    here means you know exactly which codepoint you ended up with.</p>
 
       <h2>Always invisible, always safe to delete</h2>
       <p>These carry no meaning in finished text. Every one of them is removed by default, in both tools on this site.</p>
@@ -282,6 +318,28 @@
         </table>
       </div>
 
+  <h2>For a blank name or a blank bio</h2>
+  <p>A <strong>blank space copy</strong> is not the space bar. Most forms trim U+0020 off both ends
+    of a name, which is why a name built out of ordinary spaces comes back as empty. U+00A0 is a
+    different codepoint that looks identical and is not trimmed the same way. That is the one to
+    reach for when a form refuses a name made of spaces.</p>
+  <p>People after an <strong>invisible blank</strong> usually have the same problem from the other
+    side: the field has to look like something is in it, even though nothing should show. Either
+    character does that job. Which one a given site accepts is decided by that site, not by
+    Unicode, so if one is rejected it is worth trying the other before concluding the field cannot
+    be blanked at all.</p>
+
+  <h2>Why a blank name sometimes gets rejected</h2>
+  <p>The search <strong>blank space copy and paste instagram</strong> is the job above with one
+    extra constraint: the check runs on their side, and it changes without notice. A character that
+    went through last month can start coming back as invalid. Copy one, paste it, save, then look
+    at the profile from a second device before assuming it held.</p>
+  <p>What gets called an <strong>invisible name symbol</strong> is the same handful of codepoints
+    under a different name. When U+200B is refused, the usual fallback is U+3164, the Hangul filler
+    &mdash; a real letter slot that renders blank in most fonts rather than a zero-width mark, so it
+    takes up room instead of collapsing to nothing. That difference is also why it behaves
+    differently in fields that measure width.</p>
+
   <h2>Why they end up in ordinary text</h2>
   <p>Three sources cover almost all of it. Rich text editors insert zero width spaces and
     no-break spaces as you type, and they come along when you copy. AI chat output carries
@@ -290,10 +348,37 @@
   <p>None of those are visible, which is the whole problem. A string that renders identically to
     another one can still fail to match it.</p>
 
-  <h2>How to find them in your text</h2>
-  <p>Paste the text into the <a href="/zero-width-space">zero-width space remover</a>. It marks
-    each hidden character in place, so you see where it sits before anything is deleted, and then
-    removes it. Nothing is uploaded &mdash; the scan runs in your browser.</p>
+  <h2 id="check">Check whether your text has any</h2>
+  <p>Paste a line in. It is scanned in your browser &mdash; nothing is uploaded &mdash; and it
+    answers two questions: are there any, and how many.</p>
+
+  <div class="tool">
+    <div class="pane">
+      <label for="checkin">Paste the text to scan</label>
+      <textarea id="checkin" spellcheck="false" placeholder="Paste a name, a line of copy, a JSON value..."></textarea>
+      <fieldset>
+        <legend>What to count</legend>
+        <label class="opt check"><input type="checkbox" id="chk-wide"> Also count joiners, direction marks and spaces that are not the space bar</label>
+      </fieldset>
+      <div class="row">
+        <button class="primary" type="button" id="checkbtn">Scan</button>
+        <button type="button" id="checkclear">Clear</button>
+      </div>
+    </div>
+    <div class="pane">
+      <label>What it found</label>
+      <div id="checkout">
+        <p class="verdict idle">Nothing scanned yet.</p>
+      </div>
+      <div class="row" id="checkactions" hidden>
+        <button type="button" id="checkcopy">Copy cleaned text</button>
+        <span class="copied" id="checkmsg" role="status"></span>
+      </div>
+    </div>
+  </div>
+
+  <p>To take them out and carry on, the <a href="/zero-width-space">zero-width space remover</a>
+    marks each one in place before anything is deleted.</p>
 
   <h2>A note on the other side of this</h2>
   <p>The same characters are also used to hide text in a URL, to smuggle words past a filter, and
@@ -306,7 +391,9 @@
     <a href="/about">About</a> &middot; <a href="/privacy">Privacy</a> &middot; <a href="/contact">Contact</a> &middot; <a href="https://github.com/f6946672/stripinvisible/blob/main/invisible-characters.html">Source</a>
   </footer>
 </main>
+<script src="/core.js"></script>
 <script src="/list.js"></script>
+<script src="/checker.js"></script>
 <!-- Cloudflare Web Analytics -->
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token":"20874485db814b21a0a76d82d7f9b4de"}'></script>
 </body>
