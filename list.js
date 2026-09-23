@@ -1,10 +1,12 @@
 (function () {
-  var text = '';
-  var buttons = document.querySelectorAll('button.copycp');
+  var buttons = document.querySelectorAll('button[data-cp]');
   var live = document.createElement('p');
   live.className = 'copylive';
   live.setAttribute('role', 'status');
   live.hidden = true;
+
+  var pending = '';
+  var pendingMsg = '';
 
   function say(msg) {
     live.textContent = msg;
@@ -12,33 +14,38 @@
     setTimeout(function () { live.hidden = true; }, 1600);
   }
 
-  function put(text) {
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(text).then(function () { say('Copied'); }, fallback);
-    } else {
-      fallback();
-    }
-  }
-
   function fallback() {
     var ta = document.createElement('textarea');
-    ta.value = text;
+    ta.value = pending;
     ta.setAttribute('readonly', 'readonly');
     ta.style.position = 'fixed';
     ta.style.opacity = '0';
     document.body.appendChild(ta);
     ta.select();
-    try { document.execCommand('copy'); say('Copied'); } catch (e) { say('Copy failed — select it manually'); }
+    try {
+      document.execCommand('copy');
+      say(pendingMsg);
+    } catch (e) {
+      say('Copy failed — select it manually');
+    }
     document.body.removeChild(ta);
   }
 
-  var text = '';
+  function put(text, msg) {
+    pending = text;
+    pendingMsg = msg;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function () { say(msg); }, fallback);
+    } else {
+      fallback();
+    }
+  }
 
   Array.prototype.forEach.call(buttons, function (btn) {
     btn.addEventListener('click', function () {
       var cp = parseInt(btn.getAttribute('data-cp'), 10);
-      text = String.fromCodePoint(cp);
-      put(text);
+      var label = btn.getAttribute('data-label');
+      put(String.fromCodePoint(cp), 'Copied' + (label ? ' ' + label : ''));
     });
   });
 
