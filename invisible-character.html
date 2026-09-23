@@ -1,0 +1,376 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Invisible Character: What It Is, and What It Does to Your Forms</title>
+<meta name="description" content="An invisible character is a Unicode format character (category Cf). Unicode 15.1 defines 170 of them; measured in Chromium 153, 128 render at exactly 0.00 px. Measured: browsers reject every one in an email field, but a field holding only one still counts as filled.">
+<link rel="canonical" href="https://stripinvisible.com/invisible-character">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://stripinvisible.com/invisible-character">
+<meta property="og:title" content="Invisible Character: What It Is, and What It Does to Your Forms">
+<meta property="og:description" content="Unicode 15.1 has 170 format characters. Measured in Chromium 153: 128 render at 0.00 px, the browser rejects all of them in an email field, and all of them count as a filled required field.">
+<meta name="twitter:card" content="summary">
+<meta property="og:image" content="https://stripinvisible.com/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:image" content="https://stripinvisible.com/og-image.png">
+
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/styles.css">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebPage",
+      "name": "Invisible Character: What It Is, and What It Does to Your Forms",
+      "url": "https://stripinvisible.com/invisible-character",
+      "description": "What an invisible character is, how many Unicode defines, and what measured behaviour it has in browser form validation."
+    },
+    {
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "Strip Invisible", "item": "https://stripinvisible.com/" },
+        { "@type": "ListItem", "position": 2, "name": "Invisible Character" }
+      ]
+    },
+    {
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "What is an invisible character?",
+          "acceptedAnswer": { "@type": "Answer", "text": "A Unicode character in the general category Cf (format) that takes a position in a string and draws nothing. Unicode 15.1 assigns 170 of them. Measured in Chromium 153 at 16px system-ui, 128 have an advance width of exactly 0.00 px." }
+        },
+        {
+          "@type": "Question",
+          "name": "How many invisible characters are there?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Unicode 15.1 assigns 170 format characters (category Cf), in 21 contiguous ranges. Measured in Chromium 153, 128 render with zero advance width, 8 measure under 0.35 px, and 34 draw a visible glyph from 9.41 px to 24.81 px wide." }
+        },
+        {
+          "@type": "Question",
+          "name": "Can an invisible character break an email field?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Chromium's built-in email validation rejects all 128 zero-width format characters in the local part of an address. Common hand-written regexes do not: a pattern built on [^\\s@]+ accepts U+200B in the local part, and only rejects U+FEFF." }
+        },
+        {
+          "@type": "Question",
+          "name": "Does a required field accept an invisible character?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Yes. Measured in Chromium 153, a text input with the required attribute passes checkValidity() when its value is a single zero-width character, for all 128 zero-width format characters tested. An empty string is the only thing that fails." }
+        },
+        {
+          "@type": "Question",
+          "name": "How do I remove invisible characters?",
+          "acceptedAnswer": { "@type": "Answer", "text": "In JavaScript: text.replace(/[\\u00AD\\u180E\\u200B-\\u200F\\u202A-\\u202E\\u2060-\\u206F\\uFEFF\\uFFF9-\\uFFFB]/gu, ''). In Python: ''.join(ch for ch in text if ch.isprintable()). Leave U+200C, U+200D and U+FE0F alone unless the text has no emoji and no Arabic, Persian or Devanagari." }
+        }
+      ]
+    }
+  ]
+}
+</script>
+</head>
+<body>
+<main>
+
+  <nav class="crumbs" aria-label="Breadcrumb">
+    <a href="/">Strip Invisible</a> &rsaquo; <span>Invisible Character</span>
+  </nav>
+
+  <h1>Invisible character: what it is, and what it does to your forms</h1>
+
+  <p class="lede"><strong>Short answer:</strong> an invisible character is a Unicode <em>format</em>
+    character &mdash; general category <code>Cf</code> &mdash; that holds a position in your string
+    and draws nothing on screen. Unicode 15.1 assigns <strong>170</strong> of them. Measured in
+    Chromium 153 at 16px system-ui, <strong>128 render at exactly 0.00 px</strong>, 8 more measure
+    under 0.35 px, and 34 draw a real glyph between 9.41 px and 24.81 px wide. The one you almost
+    certainly have is <strong>U+200B ZERO WIDTH SPACE</strong>: 3 bytes, 1 character, invisible,
+    survives copy and paste. On a form, measured: <strong>Chromium rejects every one of the 128</strong>
+    inside an email field, while <strong>a field holding only one still counts as filled</strong>
+    for <code>required</code>, and five of them are enough to fill a <code>maxlength="5"</code>
+    input that looks completely empty.</p>
+
+  <section class="tool">
+    <div class="pane">
+      <label for="scan">Paste text to check</label>
+      <textarea id="scan" spellcheck="false" placeholder="Paste anything you suspect came from a chat window, a document or a web page..."></textarea>
+      <div class="row">
+        <button id="scanrun" class="primary" type="button">Find invisible characters</button>
+        <button id="scanclear" type="button">Clear</button>
+      </div>
+    </div>
+    <div class="pane">
+      <label for="cleanout">Cleaned text</label>
+      <textarea id="cleanout" spellcheck="false" readonly placeholder="Cleaned text appears here."></textarea>
+      <div class="row">
+        <button id="cleancopy" type="button">Copy</button>
+        <span id="cleaned" class="copied" hidden>Copied</span>
+      </div>
+      <div id="report"></div>
+    </div>
+  </section>
+
+  <h2>What counts as an invisible character</h2>
+  <p>Unicode puts these in general category <code>Cf</code>, "format". They are real characters with
+    real code points; they just have no glyph of their own. A string containing one has a different
+    length, different bytes and a different identity from the same string without it, while looking
+    identical in every UI you own.</p>
+  <p>Enumerated with Python 3.13 (<code>unicodedata</code>, Unicode 15.1.0): <strong>170 Cf
+    characters in 21 ranges</strong>, next to 65 control characters (<code>Cc</code>), 17 spaces
+    (<code>Zs</code>) and one each of line and paragraph separator. Then each of the 170 was
+    measured in Chromium 153 by rendering <code>|X|</code> and subtracting the width of
+    <code>||</code>:</p>
+
+  <div class="scroll">
+    <table>
+      <thead>
+        <tr><th>Codepoint range</th><th>Count</th><th>Measured advance width</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="cp">U+200B&ndash;U+200F</td><td class="cp">5</td><td class="name">0.00 px (U+200C, U+200F: 0.02 px)</td></tr>
+        <tr><td class="cp">U+202A&ndash;U+202E</td><td class="cp">5</td><td class="name">0.00 px (U+202B, U+202E: 0.02 px)</td></tr>
+        <tr><td class="cp">U+2060&ndash;U+2064</td><td class="cp">5</td><td class="name">0.00 px</td></tr>
+        <tr><td class="cp">U+2066&ndash;U+206F</td><td class="cp">10</td><td class="name">0.00 px (U+2067: 0.02 px)</td></tr>
+        <tr><td class="cp">U+E0020&ndash;U+E007F</td><td class="cp">96</td><td class="name">0.00 px</td></tr>
+        <tr><td class="cp">U+1D173&ndash;U+1D17A</td><td class="cp">8</td><td class="name">0.00 px</td></tr>
+        <tr><td class="cp">U+E0001</td><td class="cp">1</td><td class="name">0.00 px</td></tr>
+        <tr><td class="cp">U+FEFF</td><td class="cp">1</td><td class="name">0.00 px</td></tr>
+        <tr><td class="cp">U+00AD</td><td class="cp">1</td><td class="name">0.00 px</td></tr>
+        <tr><td class="cp">U+180E</td><td class="cp">1</td><td class="name">0.00 px</td></tr>
+        <tr><td class="cp">U+061C</td><td class="cp">1</td><td class="name">0.02 px &mdash; sub-pixel, still nothing to see</td></tr>
+        <tr><td class="cp">U+070F</td><td class="cp">1</td><td class="name">0.34 px &mdash; sub-pixel</td></tr>
+        <tr><td class="cp">U+0600&ndash;U+0605</td><td class="cp">6</td><td class="name"><strong>visible</strong>, 9.41&ndash;24.81 px (Arabic number and verse marks)</td></tr>
+        <tr><td class="cp">U+06DD, U+0890&ndash;U+0891, U+08E2</td><td class="cp">4</td><td class="name"><strong>visible</strong>, 11.17&ndash;17.98 px</td></tr>
+        <tr><td class="cp">U+FFF9&ndash;U+FFFB</td><td class="cp">3</td><td class="name"><strong>visible</strong>, 11.16 px (interlinear annotation)</td></tr>
+        <tr><td class="cp">U+110BD, U+110CD</td><td class="cp">2</td><td class="name"><strong>visible</strong>, 10.41 px (Kaithi number signs)</td></tr>
+        <tr><td class="cp">U+13430&ndash;U+1343F</td><td class="cp">16</td><td class="name"><strong>visible</strong>, 9.72&ndash;11.16 px (Egyptian hieroglyph format)</td></tr>
+        <tr><td class="cp">U+1BCA0&ndash;U+1BCA3</td><td class="cp">4</td><td class="name"><strong>visible</strong>, 18.06 px (shorthand format)</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>For scale, a letter <code>A</code> measures 11.27 px in the same run, so the 34 visible ones are
+    not marginal &mdash; a few are wider than two letters. Being in category <code>Cf</code> does
+    <em>not</em> guarantee you cannot see it.</p>
+
+  <h2>Eight of them, measured end to end</h2>
+  <p>Node 22.22.2 and Python 3.13.14 for the language behaviour, Chromium 153.0.8010.12 for the
+    rendering and the form checks. Advance width is the <code>|X|</code> minus <code>||</code>
+    measurement above.</p>
+
+  <div class="scroll">
+    <table>
+      <thead>
+        <tr><th>Codepoint</th><th>Name</th><th>Width</th><th>JS <code>trim()</code></th><th>JS <code>/\s/</code></th><th>NFKC</th><th>UTF-8</th><th>In a URL</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="cp">U+200B</td><td class="name">ZERO WIDTH SPACE</td><td class="cp">0.00 px</td><td>kept</td><td>no</td><td>kept</td><td class="cp">3 B</td><td class="cp">%E2%80%8B</td></tr>
+        <tr><td class="cp">U+200C</td><td class="name">ZERO WIDTH NON-JOINER</td><td class="cp">0.02 px</td><td>kept</td><td>no</td><td>kept</td><td class="cp">3 B</td><td class="cp">%E2%80%8C</td></tr>
+        <tr><td class="cp">U+200D</td><td class="name">ZERO WIDTH JOINER</td><td class="cp">0.00 px</td><td>kept</td><td>no</td><td>kept</td><td class="cp">3 B</td><td class="cp">%E2%80%8D</td></tr>
+        <tr><td class="cp">U+2060</td><td class="name">WORD JOINER</td><td class="cp">0.00 px</td><td>kept</td><td>no</td><td>kept</td><td class="cp">3 B</td><td class="cp">%E2%81%A0</td></tr>
+        <tr><td class="cp">U+FEFF</td><td class="name">ZERO WIDTH NO-BREAK SPACE</td><td class="cp">0.00 px</td><td><strong>removed</strong></td><td><strong>yes</strong></td><td>kept</td><td class="cp">3 B</td><td class="cp">%EF%BB%BF</td></tr>
+        <tr><td class="cp">U+00AD</td><td class="name">SOFT HYPHEN</td><td class="cp">0.00 px</td><td>kept</td><td>no</td><td>kept</td><td class="cp">2 B</td><td class="cp">%C2%AD</td></tr>
+        <tr><td class="cp">U+180E</td><td class="name">MONGOLIAN VOWEL SEPARATOR</td><td class="cp">0.00 px</td><td>kept</td><td>no</td><td>kept</td><td class="cp">3 B</td><td class="cp">%E1%A0%8E</td></tr>
+        <tr><td class="cp">U+2062</td><td class="name">INVISIBLE TIMES</td><td class="cp">0.00 px</td><td>kept</td><td>no</td><td>kept</td><td class="cp">3 B</td><td class="cp">%E2%81%A2</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p><strong>We expected none of them to be whitespace. That was wrong for one.</strong> U+FEFF is
+    the only one of the eight that JavaScript treats as whitespace: <code>/\s/.test("\uFEFF")</code>
+    is <code>true</code>, and <code>trim()</code> strips it off both ends. The other seven survive
+    <code>trim()</code>, so <code>"ada@example.com\u200B".trim()</code> is still 16 characters long
+    and still carries the character. Python disagrees: <code>str.strip()</code> removes
+    <em>none</em> of the eight, and <code>re.search(r"\s", "\uFEFF")</code> finds nothing. If your
+    pipeline trims input in Python and validates it in a browser, the same string can be clean on
+    one side and dirty on the other.</p>
+
+  <h2>Measured: what happens on a real form</h2>
+  <p>Each row was run in Chromium 153 against a real input element, not reasoned about.</p>
+
+  <div class="scroll">
+    <table>
+      <thead>
+        <tr><th>Check</th><th>Result</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="name"><code>&lt;input type="email"&gt;</code> with the character in the local part</td>
+          <td><strong>Rejected, 128 out of 128.</strong> Zero of the zero-width format characters are accepted. Chromium's message names the character: <em>"A part followed by '@' should not contain the symbol '&nbsp;'."</em></td>
+        </tr>
+        <tr>
+          <td class="name">Regex <code>/^[^\s@]+@[^\s@]+\.[^\s@]+$/</code></td>
+          <td>Accepts U+200B, U+200C, U+200D, U+2060, U+00AD, U+180E and U+2062 in the local part. Rejects U+FEFF &mdash; the only one <code>\s</code> matches.</td>
+        </tr>
+        <tr>
+          <td class="name">Regex <code>/^\S+@\S+\.\S+$/</code></td>
+          <td>Same split: seven pass, U+FEFF fails.</td>
+        </tr>
+        <tr>
+          <td class="name">Regex <code>/^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/</code></td>
+          <td>Rejects all eight, and rejects any non-ASCII character at all &mdash; including ones you want, like a non-Latin-script address.</td>
+        </tr>
+        <tr>
+          <td class="name"><code>required</code> text input holding only that character</td>
+          <td><strong>Passes as filled, 128 out of 128.</strong> An empty string is the only value that fails the check.</td>
+        </tr>
+        <tr>
+          <td class="name"><code>maxlength="5"</code>, typing the character 12 times</td>
+          <td>Five BMP invisible characters fit (5 UTF-16 units). Only two astral ones fit &mdash; U+E0020 and U+1D173 cost 2 units each, so the field stops at 4 units and looks empty.</td>
+        </tr>
+        <tr>
+          <td class="name">Equality and search</td>
+          <td><code>"hello" === "he\u200Bllo"</code> is <code>false</code>, <code>indexOf("hello")</code> returns <code>-1</code>, but <code>localeCompare</code> returns <code>0</code> &mdash; collation calls them equal, code does not.</td>
+        </tr>
+        <tr>
+          <td class="name">Serialization</td>
+          <td><code>JSON.stringify</code> emits U+200B raw into the output. Python <code>json.dumps</code> escapes it as <code>\u200b</code>. Both parse back to the same 3-character string.</td>
+        </tr>
+        <tr>
+          <td class="name">Size on the wire</td>
+          <td>3 bytes in UTF-8, 9 characters once percent-encoded (<code>%E2%80%8B</code>). A string that looks 15 characters long can be 17 bytes in a POST body.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Why the browser catches it and your regex does not</h2>
+  <p>The HTML specification defines what an email address may contain, and Chromium implements that
+    list literally: an unlisted character in the local part is an error, invisible or not. A
+    hand-written pattern like <code>[^\s@]+</code> means "anything that is neither whitespace nor an
+    at sign" &mdash; and U+200B is neither, so it sails through. The two disagree in the opposite
+    direction as well: <code>required</code> only asks whether the value is the empty string, and a
+    single invisible character is not empty.</p>
+  <p>None of this is a bug in either place. It means "the form accepted it" and "the string is clean"
+    are two different statements, and a field can be simultaneously valid and wrong.</p>
+
+  <h2>How to find one</h2>
+  <p>Paste into the box at the top of this page, or run one of these. Both were run on
+    <code>Hello&lt;U+200B&gt;World&lt;U+FEFF&gt;!</code> and both report two hits.</p>
+  <pre><code>// JavaScript
+const RE = /[\u00AD\u180E\u200B-\u200F\u202A-\u202E\u2060-\u206F\uFEFF\uFFF9-\uFFFB]/gu;
+const hits = text.match(RE) || [];            // -&gt; ['\u200B', '\uFEFF']
+const clean = text.replace(RE, '');           // -&gt; 'HelloWorld!'</code></pre>
+  <pre><code># Python
+hits = [ch for ch in text if not ch.isprintable()]   # -&gt; ['\u200b', '\ufeff']
+clean = ''.join(ch for ch in text if ch.isprintable())</code></pre>
+  <p>Python's <code>isprintable()</code> returned <code>False</code> for all eight characters tested
+    and <code>True</code> for ordinary letters, which makes it a one-line detector with no table to
+    maintain. In a database, the tell is length: <code>LENGTH()</code> in MySQL counts bytes and
+    <code>CHAR_LENGTH()</code> counts characters, so a 3-byte invisible character shows up as a
+    difference between the two.</p>
+
+  <h2>How to remove one, and what not to remove</h2>
+  <p>Deleting by codepoint range is the safe move, and the ranges above are measured. Three of them
+    carry meaning that you can see:</p>
+  <ul>
+    <li><strong>U+200D ZERO WIDTH JOINER</strong> holds emoji sequences together as one picture. Remove it and a family emoji becomes four separate faces.</li>
+    <li><strong>U+200C ZERO WIDTH NON-JOINER</strong> is required for correct Persian, Arabic and Devanagari.</li>
+    <li><strong>U+FE0F VARIATION SELECTOR-16</strong> is what keeps an emoji rendering as a colour emoji.</li>
+  </ul>
+  <p>Everything in the zero-width table above is otherwise safe to delete from ordinary text. If you
+    would rather not decide, the <a href="/">Claude watermark remover</a> keeps the meaningful ones
+    by default and only takes the rest out when you turn on aggressive mode; the
+    <a href="/zero-width-space">zero-width space remover</a> shows you where each one sits before
+    anything is deleted.</p>
+
+  <h2>What this does not tell you</h2>
+  <p>These measurements describe how invisible characters behave. They say nothing about who put one
+    there or why, and finding one is not evidence that a text was generated by a model &mdash; rich
+    text editors, document exports and web pages all produce them too. The width and validation
+    numbers are from one browser build and one font stack; a different font can move the sub-pixel
+    rows, though not the 0.00 px ones. Every count here came from Unicode 15.1 and Chromium 153, so
+    re-run the snippets on your own stack before you rely on a specific number.</p>
+
+  <p class="crosslink">Measured 2026-09-23 with Python 3.13.14 (unicodedata 15.1.0), Node 22.22.2 and
+    Chromium 153.0.8010.12. Tools: <a href="/">Claude watermark remover</a>,
+    <a href="/zero-width-space">zero-width space remover</a>,
+    <a href="/clean-json">JSON cleaner</a>,
+    <a href="/clean-excel">Excel cell cleaner</a>.
+    Full codepoint reference: <a href="/invisible-characters">invisible Unicode characters</a>.
+    Feeding the text to a model? <a href="/token-cost">What hidden characters cost you in tokens</a>.
+    Building JSON in JavaScript? <a href="/line-separators">U+2028 and U+2029</a>.
+    Text that looks empty but is not? <a href="/tag-characters">Unicode tag characters</a>
+    hide a whole ASCII message with nothing on screen.</p>
+
+  <footer class="foot">
+    <a href="/about">About</a> &middot; <a href="/privacy">Privacy</a> &middot; <a href="/contact">Contact</a> &middot; <a href="https://github.com/f6946672/stripinvisible/blob/main/invisible-character.html">Source</a>
+  </footer>
+</main>
+<script>
+(function () {
+  var RE = /[\u00AD\u180E\u200B-\u200F\u202A-\u202E\u2060-\u206F\uFEFF\uFFF9-\uFFFB]|\u{E0001}|[\u{E0020}-\u{E007F}]|[\u{1D173}-\u{1D17A}]/gu;
+  var NAMES = {
+    '173': 'SOFT HYPHEN', '6158': 'MONGOLIAN VOWEL SEPARATOR', '8203': 'ZERO WIDTH SPACE',
+    '8204': 'ZERO WIDTH NON-JOINER', '8205': 'ZERO WIDTH JOINER', '8206': 'LEFT-TO-RIGHT MARK',
+    '8207': 'RIGHT-TO-LEFT MARK', '8234': 'LEFT-TO-RIGHT EMBEDDING', '8235': 'RIGHT-TO-LEFT EMBEDDING',
+    '8236': 'POP DIRECTIONAL FORMATTING', '8237': 'LEFT-TO-RIGHT OVERRIDE', '8238': 'RIGHT-TO-LEFT OVERRIDE',
+    '8288': 'WORD JOINER', '8289': 'FUNCTION APPLICATION', '8290': 'INVISIBLE TIMES',
+    '8291': 'INVISIBLE SEPARATOR', '8292': 'INVISIBLE PLUS', '8298': 'FIRST STRONG ISOLATE',
+    '8299': 'POP DIRECTIONAL ISOLATE', '65279': 'ZERO WIDTH NO-BREAK SPACE',
+    '65529': 'INTERLINEAR ANNOTATION ANCHOR', '65530': 'INTERLINEAR ANNOTATION SEPARATOR',
+    '65531': 'INTERLINEAR ANNOTATION TERMINATOR', '917505': 'LANGUAGE TAG',
+    '917536': 'TAG SPACE', '917599': 'TAG CANCEL', '119155': 'MUSICAL SYMBOL BEGIN BEAM'
+  };
+
+  var input = document.getElementById('scan');
+  var out = document.getElementById('cleanout');
+  var report = document.getElementById('report');
+  var copied = document.getElementById('cleaned');
+
+  function label(ch) {
+    var cp = ch.codePointAt(0);
+    var hex = cp.toString(16).toUpperCase();
+    while (hex.length < 4) hex = '0' + hex;
+    return 'U+' + hex + (NAMES[String(cp)] ? ' ' + NAMES[String(cp)] : '');
+  }
+
+  function run() {
+    var text = input.value;
+    var hits = text.match(RE) || [];
+    if (!text) {
+      out.value = '';
+      report.innerHTML = '<p class="hint">Paste something first.</p>';
+      return;
+    }
+    out.value = text.replace(RE, '');
+    if (!hits.length) {
+      report.innerHTML = '<p class="hint">No invisible characters found in ' +
+        text.length + ' character(s). Nothing was removed.</p>';
+      return;
+    }
+    var counts = {};
+    hits.forEach(function (ch) {
+      var k = label(ch);
+      counts[k] = (counts[k] || 0) + 1;
+    });
+    var rows = Object.keys(counts).map(function (k) {
+      return '<tr><td class="cp">' + k + '</td><td class="cp">' + counts[k] + '</td></tr>';
+    }).join('');
+    report.innerHTML = '<p class="hint"><strong>' + hits.length + '</strong> invisible character(s) found in ' +
+      text.length + ' character(s). Byte length goes from ' +
+      new Blob([text]).size + ' to ' + new Blob([out.value]).size + ' in UTF-8.</p>' +
+      '<div class="scroll"><table><thead><tr><th>Character</th><th>Count</th></tr></thead><tbody>' +
+      rows + '</tbody></table></div>';
+  }
+
+  document.getElementById('scanrun').addEventListener('click', run);
+  input.addEventListener('input', run);
+  document.getElementById('scanclear').addEventListener('click', function () {
+    input.value = '';
+    out.value = '';
+    report.innerHTML = '';
+  });
+  document.getElementById('cleancopy').addEventListener('click', function () {
+    if (!out.value) return;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(out.value).then(function () {
+        copied.hidden = false;
+        setTimeout(function () { copied.hidden = true; }, 1600);
+      });
+    }
+  });
+})();
+</script>
+<!-- Cloudflare Web Analytics -->
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token":"20874485db814b21a0a76d82d7f9b4de"}'></script>
+</body>
+</html>
