@@ -1,0 +1,311 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Invisible Text: What a Browser Does With Characters You Cannot See</title>
+<meta name="description" content="Invisible text comes in two families that behave in opposite ways. Measured in Chromium 153: Unicode format characters are 0.00 px wide and Ctrl+F cannot find them, while the Hangul fillers most blank-text pages hand out paint nothing but measure 16.00 px each.">
+<link rel="canonical" href="https://stripinvisible.com/invisible-text">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://stripinvisible.com/invisible-text">
+<meta property="og:title" content="Invisible Text: What a Browser Does With Characters You Cannot See">
+<meta property="og:description" content="Measured: find-in-page skips format characters entirely, a zero-width space splits a word but U+FEFF does not, and the invisible characters most sites give you are wider than a capital A.">
+<meta name="twitter:card" content="summary">
+<meta property="og:image" content="https://stripinvisible.com/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:image" content="https://stripinvisible.com/og-image.png">
+
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/styles.css">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebPage",
+      "name": "Invisible Text: What a Browser Does With Characters You Cannot See",
+      "url": "https://stripinvisible.com/invisible-text",
+      "description": "What invisible text is, the two families it falls into, and measured behaviour for search, line breaking, word segmentation, the caret and the accessibility tree."
+    },
+    {
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "Strip Invisible", "item": "https://stripinvisible.com/" },
+        { "@type": "ListItem", "position": 2, "name": "Invisible Text" }
+      ]
+    },
+    {
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "What is invisible text?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Text built from characters that paint no ink but still occupy a position in the string. There are two unrelated families: Unicode format characters (general category Cf), which measure 0.00 px advance width in Chromium 153, and Hangul filler letters such as U+3164 (category Lo), which paint nothing but measure 16.00 px each at 16px system-ui, wider than a capital A at 11.27 px." }
+        },
+        {
+          "@type": "Question",
+          "name": "Can you find invisible text with Ctrl+F?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Not if it is a format character. Measured in Chromium 153, a find-in-page query consisting only of U+200B returns no match, and the same is true of U+00AD, U+FEFF, U+2060, U+200D, U+180E and U+E0020. A query of U+3164 or U+2028 does match. Going the other way, the visible query Hello still matches the text He+U+200B+llo, because find-in-page skips format characters on both sides." }
+        },
+        {
+          "@type": "Question",
+          "name": "Does an invisible character separate two words?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Depends which one. Measured with word-granularity selection in Chromium 153: U+200B acts as a word boundary, so double-clicking selects only hello out of hello+U+200B+world. U+FEFF, U+00AD, U+2060, U+200D, U+180E and U+E0020 do not, so the whole eleven-character run selects as a single word." }
+        },
+        {
+          "@type": "Question",
+          "name": "Does invisible text survive copy and paste?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Yes, completely. Measured by selecting a run of text and reading the clipboard back in Chromium 153: a fifteen-code-point string carrying four embedded invisible characters came back as fifteen code points with all four intact, for every character tested including U+2028 and the astral U+E0020." }
+        },
+        {
+          "@type": "Question",
+          "name": "How do I remove invisible text?",
+          "acceptedAnswer": { "@type": "Answer", "text": "In JavaScript: text.replace(/[\\u00AD\\u180E\\u200B-\\u200F\\u202A-\\u202E\\u2060-\\u206F\\uFEFF\\uFFF9-\\uFFFB\\u3164\\u1160\\u115F\\uFFA0]/gu, ''). In Python: import unicodedata; BAD = {'\\u3164','\\u1160','\\u115f','\\uffa0'}; clean = ''.join(c for c in text if unicodedata.category(c) != 'Cf' and c not in BAD). Leave U+200C, U+200D and U+FE0F in place unless the text has no emoji and no Arabic, Persian or Devanagari." }
+        }
+      ]
+    }
+  ]
+}
+</script>
+</head>
+<body>
+<main>
+
+  <nav class="crumbs" aria-label="Breadcrumb">
+    <a href="/">Strip Invisible</a> &rsaquo; <span>Invisible Text</span>
+  </nav>
+
+  <h1>Invisible text: two different things, and only one of them is zero-width</h1>
+
+  <p class="lede"><strong>Short answer:</strong> invisible text is text made of characters that
+    paint no ink but still hold a position in the string. There are two families, and they behave in
+    opposite ways. <strong>Unicode format characters</strong> &mdash; general category
+    <code>Cf</code> &mdash; measure <strong>0.00 px</strong> in Chromium 153, and find-in-page
+    ignores them in both directions: you cannot search for one, and one sitting inside a word does
+    not stop you finding that word. The characters most blank-text pages hand out instead, the
+    Hangul fillers such as <strong>U+3164</strong>, are <em>letters</em> (category <code>Lo</code>).
+    They paint nothing either, but each one measures <strong>16.00 px</strong> at 16px system-ui
+    &mdash; wider than a capital A at 11.27 px. Both kinds survive copy and paste completely, and
+    both are handed to the accessibility layer unchanged.</p>
+
+  <h2>The two families, side by side</h2>
+  <p>Everything below was measured in Chromium 153 on Windows. Widths come from rendering
+    <code>|X|</code> and subtracting the width of <code>||</code>, at 16px system-ui. The category
+    column comes from Python 3.13 (<code>unicodedata</code>, Unicode 15.1.0).</p>
+
+  <div class="scroll">
+    <table>
+      <thead>
+        <tr><th>Character</th><th>Category</th><th>Painted ink</th><th>Advance width</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="cp">U+200B ZERO WIDTH SPACE</td><td class="name">Cf</td><td class="name">0 px</td><td class="cp">0.00 px</td></tr>
+        <tr><td class="cp">U+00AD SOFT HYPHEN</td><td class="name">Cf</td><td class="name">0 px</td><td class="cp">0.00 px</td></tr>
+        <tr><td class="cp">U+FEFF ZERO WIDTH NO-BREAK SPACE</td><td class="name">Cf</td><td class="name">0 px</td><td class="cp">0.00 px</td></tr>
+        <tr><td class="cp">U+2060 WORD JOINER</td><td class="name">Cf</td><td class="name">0 px</td><td class="cp">0.00 px</td></tr>
+        <tr><td class="cp">U+200D ZERO WIDTH JOINER</td><td class="name">Cf</td><td class="name">0 px</td><td class="cp">0.00 px</td></tr>
+        <tr><td class="cp">U+180E MONGOLIAN VOWEL SEPARATOR</td><td class="name">Cf</td><td class="name">0 px</td><td class="cp">0.00 px</td></tr>
+        <tr><td class="cp">U+E0020 TAG SPACE</td><td class="name">Cf</td><td class="name">0 px</td><td class="cp">0.00 px</td></tr>
+        <tr><td class="cp">U+3164 HANGUL FILLER</td><td class="name">Lo</td><td class="name">0 px</td><td class="cp">16.00 px</td></tr>
+        <tr><td class="cp">U+1160 HANGUL JUNGSEONG FILLER</td><td class="name">Lo</td><td class="name">0 px</td><td class="cp">16.00 px</td></tr>
+        <tr><td class="cp">U+115F HANGUL CHOSEONG FILLER</td><td class="name">Lo</td><td class="name">0 px</td><td class="cp">16.00 px</td></tr>
+        <tr><td class="cp">U+FFA0 HALFWIDTH HANGUL FILLER</td><td class="name">Lo</td><td class="name">0 px</td><td class="cp">8.00 px</td></tr>
+        <tr><td class="cp">U+2800 BRAILLE PATTERN BLANK</td><td class="name">So</td><td class="name">0 px</td><td class="cp">10.42 px</td></tr>
+        <tr><td class="cp">U+0041 LATIN CAPITAL LETTER A</td><td class="name">Lu</td><td class="name">247 px</td><td class="cp">11.27 px</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>Ink was counted on a canvas at 32px: the letter A lights up 247 pixels, every character in this
+    table lights up zero. That is the whole trick, and it is also the whole problem &mdash; "paints
+    nothing" and "takes no space" are two different properties, and only the <code>Cf</code> family
+    has both. A run of <strong>1,000 zero-width spaces measures 0.00 px</strong>; a run of 1,000
+    Hangul fillers measures over 16,000. Only one of those is invisible in the sense people
+    actually mean.</p>
+
+  <h2>You cannot search for it, and it does not hide what is around it</h2>
+  <p>This is the part that surprises people. Find-in-page does not treat invisible characters as
+    characters at all &mdash; it treats them as absent. Measured with <code>window.find()</code> in
+    Chromium 153:</p>
+
+  <div class="scroll">
+    <table>
+      <thead>
+        <tr><th>Searching for this character on its own</th><th>Found?</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="cp">U+200B ZERO WIDTH SPACE</td><td class="cp">no</td></tr>
+        <tr><td class="cp">U+00AD SOFT HYPHEN</td><td class="cp">no</td></tr>
+        <tr><td class="cp">U+FEFF ZERO WIDTH NO-BREAK SPACE</td><td class="cp">no</td></tr>
+        <tr><td class="cp">U+2060 WORD JOINER</td><td class="cp">no</td></tr>
+        <tr><td class="cp">U+200D ZERO WIDTH JOINER</td><td class="cp">no</td></tr>
+        <tr><td class="cp">U+180E MONGOLIAN VOWEL SEPARATOR</td><td class="cp">no</td></tr>
+        <tr><td class="cp">U+E0020 TAG SPACE</td><td class="cp">no</td></tr>
+        <tr><td class="cp">U+2028 LINE SEPARATOR</td><td class="cp">yes</td></tr>
+        <tr><td class="cp">U+3164 HANGUL FILLER</td><td class="cp">yes</td></tr>
+        <tr><td class="cp">U+1160 HANGUL JUNGSEONG FILLER</td><td class="cp">yes</td></tr>
+        <tr><td class="cp">U+FFA0 HALFWIDTH HANGUL FILLER</td><td class="cp">yes</td></tr>
+        <tr><td class="cp">U+2800 BRAILLE PATTERN BLANK</td><td class="cp">yes</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>So the usual advice &mdash; press Ctrl+F and search for the character to see where it is
+    &mdash; does not work for any format character. Note where the line falls: U+2028 is a line
+    separator, not a format character, and the Hangul fillers are letters, so all of them are
+    findable. Now the other direction, which is where it gets strange. Put one inside a word and
+    search for the word:</p>
+
+  <div class="scroll">
+    <table>
+      <thead>
+        <tr><th>Character inside</th><th>Query</th><th>Match</th><th>Selection returned</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="cp">U+200B</td><td class="name">Hello</td><td class="cp">yes</td><td class="name">6 code points, invisible one included</td></tr>
+        <tr><td class="cp">U+200B</td><td class="name">Hell</td><td class="cp">yes</td><td class="name">5 code points</td></tr>
+        <tr><td class="cp">U+200B</td><td class="name">Helxo</td><td class="cp">no</td><td class="name">&mdash;</td></tr>
+        <tr><td class="cp">U+FEFF</td><td class="name">Hello</td><td class="cp">yes</td><td class="name">6 code points, invisible one included</td></tr>
+        <tr><td class="cp">U+E0020</td><td class="name">Hello</td><td class="cp">yes</td><td class="name">6 code points, invisible one included</td></tr>
+        <tr><td class="cp">U+2028</td><td class="name">Hello</td><td class="cp">no</td><td class="name">&mdash;</td></tr>
+        <tr><td class="cp">U+00A0</td><td class="name">Hello</td><td class="cp">no</td><td class="name">&mdash;</td></tr>
+        <tr><td class="cp">U+0041, a real X</td><td class="name">Hello</td><td class="cp">no</td><td class="name">&mdash;</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>The control rows matter. Searching <em>Helxo</em> against the same text fails, and searching
+    <em>Hello</em> against <em>HeXllo</em> fails, so this is not a loose match. Chromium genuinely
+    skips format characters when it compares, which means a hidden message buried in a word does not
+    break search for that word &mdash; but it also means the search box is useless as a detector.
+    Replace the zero-width space with U+2028 or a no-break space and the match fails again: those are
+    separators, not format characters, and they are not skipped.</p>
+
+  <h2>Which ones break a line, and which ones do not</h2>
+  <p>People reach for invisible text to make long unbreakable strings wrap, and to stop two words
+    being read as one. Only some of these characters do either job. Measured in a 60px box holding
+    <code>AAAAA&lt;char&gt;BBBBB</code>; with no character at all it lays out as one line, 20px
+    tall, 106px of overflow:</p>
+
+  <div class="scroll">
+    <table>
+      <thead>
+        <tr><th>Character</th><th>Line boxes</th><th>Height</th><th>Overflow width</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="cp">U+200B</td><td class="cp">2</td><td class="cp">40 px</td><td class="cp">60 px</td></tr>
+        <tr><td class="cp">U+00AD</td><td class="cp">3</td><td class="cp">40 px</td><td class="cp">63 px</td></tr>
+        <tr><td class="cp">U+2028</td><td class="cp">2</td><td class="cp">40 px</td><td class="cp">61 px</td></tr>
+        <tr><td class="cp">U+FEFF</td><td class="cp">1</td><td class="cp">20 px</td><td class="cp">106 px</td></tr>
+        <tr><td class="cp">U+2060</td><td class="cp">1</td><td class="cp">20 px</td><td class="cp">106 px</td></tr>
+        <tr><td class="cp">U+200D</td><td class="cp">1</td><td class="cp">20 px</td><td class="cp">106 px</td></tr>
+        <tr><td class="cp">U+180E</td><td class="cp">1</td><td class="cp">20 px</td><td class="cp">106 px</td></tr>
+        <tr><td class="cp">U+E0020</td><td class="cp">1</td><td class="cp">20 px</td><td class="cp">106 px</td></tr>
+        <tr><td class="cp">U+00A0</td><td class="cp">1</td><td class="cp">20 px</td><td class="cp">111 px</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>The Unicode names are honest here, which is rare. U+FEFF is called ZERO WIDTH NO-BREAK SPACE
+    and it does not offer a break point. U+2060 is called WORD JOINER and it does not offer one
+    either. If you are trying to get a long URL to wrap in a comment box, four of the seven format
+    characters tested will do nothing at all &mdash; only U+200B and U+00AD help, and U+00AD draws a
+    hyphen when it breaks, which is why its overflow is 63px rather than 60px.</p>
+
+  <h2>Which ones split a word</h2>
+  <p>Word segmentation is what decides what a double-click selects, where the cursor stops when you
+    hold Ctrl and press an arrow, and what a tokenizer hands to a search index. Measured with
+    word-granularity selection on <code>hello&lt;char&gt;world</code>:</p>
+
+  <div class="scroll">
+    <table>
+      <thead>
+        <tr><th>Separator</th><th>Word stops at</th><th>Double-click selects</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="cp">space U+0020</td><td class="name">0, 6, 11</td><td class="name">&ldquo;hello &rdquo;</td></tr>
+        <tr><td class="cp">U+200B</td><td class="name">0, 5, 11</td><td class="name">&ldquo;hello&rdquo;</td></tr>
+        <tr><td class="cp">U+2028</td><td class="name">0, 6, 11</td><td class="name">&ldquo;hello&rdquo; plus the separator</td></tr>
+        <tr><td class="cp">U+00A0</td><td class="name">0, 6, 11</td><td class="name">&ldquo;hello&rdquo; plus the space</td></tr>
+        <tr><td class="cp">U+FEFF</td><td class="name">0, 11</td><td class="name">all 11 code points, one word</td></tr>
+        <tr><td class="cp">U+00AD</td><td class="name">0, 11</td><td class="name">all 11 code points, one word</td></tr>
+        <tr><td class="cp">U+2060</td><td class="name">0, 11</td><td class="name">all 11 code points, one word</td></tr>
+        <tr><td class="cp">U+200D</td><td class="name">0, 11</td><td class="name">all 11 code points, one word</td></tr>
+        <tr><td class="cp">U+E0020</td><td class="name">0, 12</td><td class="name">all 11 code points, one word</td></tr>
+        <tr><td class="cp">U+3164</td><td class="name">0, 11</td><td class="name">all 11 code points, one word</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>U+200B is the odd one out: it splits the word exactly like a normal space does, and it is the
+    only format character here that does. U+3164 behaves like a letter, because it is one &mdash;
+    double-clicking <code>hello&#12644;world</code> takes the whole thing. So two "invisible"
+    separators that look identical in a textarea give a search index completely different tokens.</p>
+
+  <h2>Your cursor goes through them without moving</h2>
+  <p>Place the caret at the start of a line and press the right arrow once per character. Across
+    five capital A's the caret advances 31.25, 42.52, 53.77, 65.03 and 76.28 px &mdash; 11.25 px a
+    step. Across five zero-width spaces it sits at <strong>20 px for every single step</strong>,
+    including the last one. The same holds for U+FEFF. There is no visual signal at all that five
+    characters went past, which is why a line containing invisible text can feel like it has a dead
+    key in the middle of it, and why retyping a suspicious string by hand works when editing it does
+    not.</p>
+
+  <h2>It copies perfectly, and it reaches the screen reader</h2>
+  <p>Two claims about invisible text are usually made in opposite directions: that it gets lost in
+    transit, and that it is the most durable thing in the string. Measured, the second one is right.
+    Selecting a fifteen-code-point run carrying four embedded invisible characters and reading the
+    clipboard back returned all fifteen code points with all four intact, for every character tested
+    &mdash; U+200B, U+00AD, U+FEFF, U+2060, U+200D, U+180E, the astral U+E0020, and U+2028. Nothing
+    was dropped, and nothing was normalised away. The browser's own notion of rendered text keeps
+    them too: <code>innerText</code> and <code>textContent</code> came back identical at thirteen
+    code points, zero dropped.</p>
+
+  <p>The accessibility layer is where the disagreement usually sits, and it is a disagreement about
+    different layers rather than about facts. Chromium does not filter these characters before
+    handing text to assistive technology: read the full accessibility tree for the string
+    <code>Hello</code> + the character + <code>World</code>, and the static text node still carries
+    the raw code point, for all eight characters tested. So the browser passes the code points through verbatim, and what happens next
+    belongs entirely to the screen reader &mdash; one reader may say nothing, another spells the
+    code point out, and either behaviour is consistent with what was measured here.</p>
+
+  <h2>Getting it back out</h2>
+  <p>Format characters come out with a character class; the fillers have to be named separately
+    because they are letters and no whitespace or format filter will touch them:</p>
+
+  <p><code>text.replace(/[\u00AD\u180E\u200B-\u200F\u202A-\u202E\u2060-\u206F\uFEFF\uFFF9-\uFFFB\u3164\u1160\u115F\uFFA0]/gu, '')</code></p>
+
+  <p>Leave U+200C, U+200D and U+FE0F alone unless the text has no emoji and no Arabic, Persian or
+    Devanagari in it &mdash; stripping the joiner is what turns a family emoji into two separate
+    people. If you would rather see each one before deciding, the
+    <a href="/zero-width-space">zero-width space remover</a> marks where they sit in the string, and
+    the <a href="/invisible-characters">invisible characters list</a> covers the rest of the code
+    points by name.</p>
+
+  <h2>What this page does not tell you</h2>
+  <p>None of this tells you who put the characters there or why, and none of it is evidence that a
+    text came from any particular tool &mdash; both families have legitimate uses, and a stray one
+    usually comes from a bad conversion or a copy out of a developer tool. Every figure here was
+    measured in Chromium 153 on Windows; other engines lay out text and segment words with their own
+    rules, and a tokenizer inside a search index is a different thing again from either. Check the
+    numbers on your own stack before you build anything on them.</p>
+
+  <p class="crosslink">Measured 2026-09-24 with Chromium 153.0.8010.12 on Windows, Python 3.13
+    (<code>unicodedata</code> 15.1.0) and Node 22 via Playwright. Related:
+    <a href="/invisible-character">what an invisible character does to a form field</a>,
+    <a href="/tag-characters">Unicode tag characters</a> that hide a whole ASCII message,
+    <a href="/token-cost">what invisible characters cost you in tokens</a>,
+    <a href="/line-separators">U+2028 and U+2029 in JSON</a>,
+    <a href="/clean-json">JSON cleaner</a>,
+    <a href="/clean-excel">Excel cell cleaner</a>,
+    <a href="/clean-word">Word and Docs cleaner</a>.</p>
+
+  <footer class="foot">
+    <a href="/about">About</a> &middot; <a href="/privacy">Privacy</a> &middot; <a href="/contact">Contact</a> &middot; <a href="https://github.com/f6946672/stripinvisible/blob/main/invisible-text.html">Source</a>
+  </footer>
+</main>
+<!-- Cloudflare Web Analytics -->
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token":"20874485db814b21a0a76d82d7f9b4de"}'></script>
+</body>
+</html>
