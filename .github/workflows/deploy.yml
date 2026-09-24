@@ -5,6 +5,12 @@ on:
     branches: [main]
   workflow_dispatch:
 
+# 同一条分支上的部署排队跑，不并发。
+# 并发跑会让"最后完成的"覆盖"最新的"，2026-09-24 踩过一次（新页上线、首页内链没跟上）。
+concurrency:
+  group: pages-deploy-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
