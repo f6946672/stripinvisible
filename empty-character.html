@@ -1,0 +1,291 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Empty Character: There Isn't One, and What to Use Instead</title>
+<meta name="description" content="There is no empty character in Unicode. Measured across twenty candidates: ten come off under both JavaScript trim() and Python strip(), U+FEFF comes off only in JavaScript, nine survive both, and NFKC turns six of them into an ordinary space.">
+<link rel="canonical" href="https://stripinvisible.com/empty-character">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://stripinvisible.com/empty-character">
+<meta property="og:title" content="Empty Character: There Isn't One, and What to Use Instead">
+<meta property="og:description" content="Measured: the one code point JavaScript trims and Python does not, the invisible character that silently eats two slots of a maxlength field, and the string that collates equal while === says it is different.">
+<meta name="twitter:card" content="summary">
+<meta property="og:image" content="https://stripinvisible.com/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:image" content="https://stripinvisible.com/og-image.png">
+
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/styles.css">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebPage",
+      "name": "Empty Character: There Isn't One, and What to Use Instead",
+      "url": "https://stripinvisible.com/empty-character",
+      "description": "What people mean by an empty character, why no such code point exists, and measured behaviour for trim, strip, regex whitespace, Unicode normalization, string length and input maxlength across twenty candidate characters."
+    },
+    {
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "Strip Invisible", "item": "https://stripinvisible.com/" },
+        { "@type": "ListItem", "position": 2, "name": "Empty Character" }
+      ]
+    },
+    {
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "Is there an empty character in Unicode?",
+          "acceptedAnswer": { "@type": "Answer", "text": "No. Every code point is a character and each one makes the string one code point longer. The nearest thing, U+0000 NULL, is a real character: JSON.stringify writes it as \\u0000, encodeURIComponent writes it as %00, and neither JavaScript's trim() nor Python's strip() removes it. What people call an empty character is either a character that paints no ink or a character that a blank-check accepts, and those are two different sets." }
+        },
+        {
+          "@type": "Question",
+          "name": "Which invisible character does trim() remove?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Measured across twenty candidates: ten are removed by both JavaScript trim() and Python strip() — tab, space, U+00A0, U+2000, U+2007, U+2028, U+2029, U+202F, U+205F and U+3000. U+FEFF is removed by JavaScript trim() but not by Python strip(). The remaining nine — U+0000, U+00AD, U+180E, U+200B, U+200C, U+200D, U+2060, U+3164 and U+E0020 — survive both." }
+        },
+        {
+          "@type": "Question",
+          "name": "Why does my string look empty but fail an empty check?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Because length and blankness are different tests. A string holding one U+200B has length 1, is not whitespace, and survives every trim. In Node 22 it also collates equal to the empty-looking version: 'sample'.localeCompare('\\u200Bsample') returns 0, while the strict comparison returns false. Two functions in the same language, two answers." }
+        },
+        {
+          "@type": "Question",
+          "name": "Does Unicode normalization remove an empty character?",
+          "acceptedAnswer": { "@type": "Answer", "text": "For six of the twenty, yes, in the sense that matters: NFKC rewrites U+00A0, U+2000, U+2007, U+202F, U+205F and U+3000 into an ordinary U+0020 space, so a comparison against a plain space succeeds after normalization and fails before it. U+200B, U+00AD, U+180E, U+2060, U+FEFF and U+E0020 come out of NFC, NFD, NFKC and NFKD unchanged. U+3164 is not deleted either — NFKC rewrites it to U+1160." }
+        },
+        {
+          "@type": "Question",
+          "name": "Can an invisible character fill up a maxlength field?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Yes. maxlength counts UTF-16 code units, not visible characters. Measured in Chromium: five U+200B fill a field with maxlength=\"5\" and display nothing. One U+E0020 tag character costs two units, so after typing abcd into the same field the tag character is silently dropped, and after abc it takes the last two slots and the following letter never arrives." }
+        }
+      ]
+    }
+  ]
+}
+</script>
+</head>
+<body>
+<main>
+
+  <nav class="crumbs" aria-label="Breadcrumb">
+    <a href="/">Strip Invisible</a> &rsaquo; <span>Empty Character</span>
+  </nav>
+
+  <h1>There is no empty character &mdash; here is what the twenty candidates actually do</h1>
+
+  <p class="lede"><strong>Short answer:</strong> Unicode has no code point that means
+    &ldquo;nothing&rdquo;. Every character you can put into a string is a character, and each one
+    makes the string one code point longer. The nearest candidate, <strong>U+0000 NULL</strong>, is
+    a real character with a real encoding: <code>JSON.stringify</code> writes it as
+    <code>&#92;u0000</code>, <code>encodeURIComponent</code> writes it as <code>%00</code>, and
+    neither JavaScript&rsquo;s <code>trim()</code> nor Python&rsquo;s <code>strip()</code> will take
+    it off &mdash; a seven-character string measured seven characters before and after. What people
+    mean by &ldquo;empty character&rdquo; is really one of two different questions, and they do not
+    have the same answer: <em>which character paints nothing on screen</em>, and <em>which
+    character a program will agree is blank</em>. I ran twenty candidates through both JavaScript
+    and Python. <strong>Ten</strong> come off under both languages&rsquo; trim.
+    <strong>One</strong> &mdash; U+FEFF &mdash; comes off under JavaScript and stays under Python.
+    <strong>Nine</strong> survive both.</p>
+
+  <h2>Two questions hiding inside one search</h2>
+
+  <p>Ask for an empty character and you are usually asking one of two things. Sometimes you want a
+    character you can put in a name field so the field looks unfilled. Sometimes you are staring at
+    a string that prints as nothing, failing a comparison, and you want to know what is in it.</p>
+
+  <p>Those are not the same list. A character that paints no ink is a question about fonts and
+    general categories; a character that passes a blank check is a question about whichever
+    predicate the program happens to call. The second one is not even stable within a single
+    language. Java ships two trimmers with different definitions &mdash; the older one takes
+    anything at or below U+0020, so it removes a trailing NUL, while the newer one asks a
+    whitespace predicate instead, so it removes U+2000 and leaves the NUL alone. The two sets
+    overlap by about ten characters, which is why people end up calling one and then the other.
+    A string holding a single space is, depending on which method you reach for, both
+    <em>not empty</em> and <em>blank</em>. Same string, two answers, one standard library.</p>
+
+  <h2>Twenty candidates, three answers</h2>
+
+  <p>Measured on this machine: Python 3.13.14 (<code>unicodedata</code> 15.1.0) and Node 22.22.2
+    (ICU 78.2, Unicode 17.0). <code>trim</code> is <code>String.prototype.trim</code>;
+    <code>strip</code> is <code>str.strip()</code> with no argument; <code>\s</code> is the regex
+    class with the Unicode flag in both. The last column is what comes out after NFKC.</p>
+
+  <div class="scroll">
+    <table>
+      <thead>
+        <tr><th>Code point</th><th>Cat</th><th>JS len</th><th>JS trim</th><th>Py strip</th><th>\s</th><th>After NFKC</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="cp">U+0000 NULL</td><td class="name">Cc</td><td class="cp">1</td><td class="name">no</td><td class="name">no</td><td class="name">no</td><td class="cp">U+0000</td></tr>
+        <tr><td class="cp">U+0009 TAB</td><td class="name">Cc</td><td class="cp">1</td><td class="name">yes</td><td class="name">yes</td><td class="name">yes</td><td class="cp">U+0009</td></tr>
+        <tr><td class="cp">U+0020 SPACE</td><td class="name">Zs</td><td class="cp">1</td><td class="name">yes</td><td class="name">yes</td><td class="name">yes</td><td class="cp">U+0020</td></tr>
+        <tr><td class="cp">U+00A0 NO-BREAK SPACE</td><td class="name">Zs</td><td class="cp">1</td><td class="name">yes</td><td class="name">yes</td><td class="name">yes</td><td class="cp">U+0020</td></tr>
+        <tr><td class="cp">U+00AD SOFT HYPHEN</td><td class="name">Cf</td><td class="cp">1</td><td class="name">no</td><td class="name">no</td><td class="name">no</td><td class="cp">U+00AD</td></tr>
+        <tr><td class="cp">U+180E MONGOLIAN VOWEL SEPARATOR</td><td class="name">Cf</td><td class="cp">1</td><td class="name">no</td><td class="name">no</td><td class="name">no</td><td class="cp">U+180E</td></tr>
+        <tr><td class="cp">U+2000 EN QUAD</td><td class="name">Zs</td><td class="cp">1</td><td class="name">yes</td><td class="name">yes</td><td class="name">yes</td><td class="cp">U+0020</td></tr>
+        <tr><td class="cp">U+2007 FIGURE SPACE</td><td class="name">Zs</td><td class="cp">1</td><td class="name">yes</td><td class="name">yes</td><td class="name">yes</td><td class="cp">U+0020</td></tr>
+        <tr><td class="cp">U+200B ZERO WIDTH SPACE</td><td class="name">Cf</td><td class="cp">1</td><td class="name">no</td><td class="name">no</td><td class="name">no</td><td class="cp">U+200B</td></tr>
+        <tr><td class="cp">U+200C ZERO WIDTH NON-JOINER</td><td class="name">Cf</td><td class="cp">1</td><td class="name">no</td><td class="name">no</td><td class="name">no</td><td class="cp">U+200C</td></tr>
+        <tr><td class="cp">U+200D ZERO WIDTH JOINER</td><td class="name">Cf</td><td class="cp">1</td><td class="name">no</td><td class="name">no</td><td class="name">no</td><td class="cp">U+200D</td></tr>
+        <tr><td class="cp">U+2028 LINE SEPARATOR</td><td class="name">Zl</td><td class="cp">1</td><td class="name">yes</td><td class="name">yes</td><td class="name">yes</td><td class="cp">U+2028</td></tr>
+        <tr><td class="cp">U+2029 PARAGRAPH SEPARATOR</td><td class="name">Zp</td><td class="cp">1</td><td class="name">yes</td><td class="name">yes</td><td class="name">yes</td><td class="cp">U+2029</td></tr>
+        <tr><td class="cp">U+202F NARROW NO-BREAK SPACE</td><td class="name">Zs</td><td class="cp">1</td><td class="name">yes</td><td class="name">yes</td><td class="name">yes</td><td class="cp">U+0020</td></tr>
+        <tr><td class="cp">U+205F MEDIUM MATHEMATICAL SPACE</td><td class="name">Zs</td><td class="cp">1</td><td class="name">yes</td><td class="name">yes</td><td class="name">yes</td><td class="cp">U+0020</td></tr>
+        <tr><td class="cp">U+2060 WORD JOINER</td><td class="name">Cf</td><td class="cp">1</td><td class="name">no</td><td class="name">no</td><td class="name">no</td><td class="cp">U+2060</td></tr>
+        <tr><td class="cp">U+3000 IDEOGRAPHIC SPACE</td><td class="name">Zs</td><td class="cp">1</td><td class="name">yes</td><td class="name">yes</td><td class="name">yes</td><td class="cp">U+0020</td></tr>
+        <tr><td class="cp">U+3164 HANGUL FILLER</td><td class="name">Lo</td><td class="cp">1</td><td class="name">no</td><td class="name">no</td><td class="name">no</td><td class="cp">U+1160</td></tr>
+        <tr><td class="cp">U+FEFF ZERO WIDTH NO-BREAK SPACE</td><td class="name">Cf</td><td class="cp">1</td><td class="name">yes</td><td class="name">no</td><td class="name">JS only</td><td class="cp">U+FEFF</td></tr>
+        <tr><td class="cp">U+E0020 TAG SPACE</td><td class="name">Cf</td><td class="cp">2</td><td class="name">no</td><td class="name">no</td><td class="name">no</td><td class="cp">U+E0020</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>Read the category column and the trim column together and the shape of the problem appears.
+    Everything the two languages agree on removing is a separator: <code>Zs</code>, <code>Zl</code>,
+    <code>Zp</code>, plus the two ASCII controls. Everything they leave behind is a
+    <code>Cf</code> format character or a letter. &ldquo;Whitespace&rdquo; and
+    &ldquo;invisible&rdquo; are simply different properties, and the trimmers only know about the
+    first one. That is the whole reason a field can look untouched and still fail
+    <code>=== ""</code>.</p>
+
+  <h2>The one character the two languages fight over</h2>
+
+  <p>U+FEFF is the single row where JavaScript and Python disagree, and it disagrees on three
+    counts at once. JavaScript&rsquo;s <code>trim()</code> removes it, JavaScript&rsquo;s
+    <code>\s</code> matches it, and so a blank check in a browser or in Node reports the string as
+    empty. In Python 3.13, <code>'\ufeff'.isspace()</code> is <code>False</code>, the
+    <code>\s</code> class does not match it, and <code>strip()</code> leaves it exactly where it
+    was.</p>
+
+  <p>That matters more than it sounds, because U+FEFF is the byte-order mark. It is the character
+    that arrives at the front of a file when something saved text as UTF-8 with a signature, and it
+    is the one most likely to be sitting at position zero of a paste you did not type. A
+    JavaScript validator cheerfully reports the field as blank. The same bytes handed to Python come
+    back non-empty, and the two halves of one system now disagree about whether the user typed
+    anything.</p>
+
+  <p>U+2028 and U+2029 deserve a footnote here. Both are whitespace to both languages, and both
+    come off under trim &mdash; but unlike the six real spaces they never normalize down to
+    U+0020, because they are line and paragraph separators rather than space separators. They trim
+    like whitespace and refuse to become a space.</p>
+
+  <h2>Normalization settles the argument before you get a vote</h2>
+
+  <p>Six of the twenty stop being exotic the moment you normalize: NFKC rewrites U+00A0, U+2000,
+    U+2007, U+202F, U+205F and U+3000 into an ordinary U+0020. Measured in Python 3.13, a
+    comparison of a leading no-break space against a leading space is <code>False</code> before
+    normalization and <code>True</code> after it. Which means a uniqueness check that runs after a
+    normalization pass treats your pasted no-break space as the space bar, and one that runs before
+    does not. The two forms also hash differently, so a lookup key computed on the raw paste will
+    miss a record that was stored normalized.</p>
+
+  <p>The other half of the table is the half that bites. U+200B, U+00AD, U+180E, U+2060, U+FEFF and
+    U+E0020 came out of NFC, NFD, NFKC and NFKD byte-identical in every test. No normalization
+    form will ever make them go away, and no amount of normalizing will turn them into something a
+    trim will remove. U+3164 is the odd one out in a different way: it is not deleted either, it is
+    <em>rewritten</em>. NFKC turns the Hangul filler into U+1160, which is a different invisible
+    character. Of the twenty rows, the plain space and U+3164 are the only two that Python reports
+    as printable &mdash; and U+3164 is printable because it is a letter, not because it shows you
+    anything.</p>
+
+  <h2>The invisible character that costs two slots</h2>
+
+  <p>Length is the test people trust most, so here is where it breaks. <code>maxlength</code> on an
+    input counts UTF-16 code units, not characters you can see. Measured in Chromium:</p>
+
+  <div class="scroll">
+    <table>
+      <thead>
+        <tr><th>What went into a field with maxlength=&quot;5&quot;</th><th>What the field holds</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="cp">abcde then X</td><td class="name">abcde &mdash; the sixth letter refused</td></tr>
+        <tr><td class="cp">abcd then U+200B</td><td class="name">5 units, the last one invisible, nothing on screen</td></tr>
+        <tr><td class="cp">eight U+200B</td><td class="name">5 units, all invisible, field looks empty and is full</td></tr>
+        <tr><td class="cp">abc then U+E0020 then d</td><td class="name">abc plus the tag character; the d never arrives</td></tr>
+        <tr><td class="cp">abcd then U+E0020</td><td class="name">abcd &mdash; the tag character dropped silently</td></tr>
+        <tr><td class="cp">one U+E0020 into maxlength=&quot;1&quot;</td><td class="name">nothing at all, 0 units</td></tr>
+        <tr><td class="cp">one emoji into maxlength=&quot;1&quot;</td><td class="name">nothing at all, 0 units</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>The tag character needs two code units and the emoji needs two code units, so in a
+    one-character field both are refused outright &mdash; the browser will not half-insert a
+    surrogate pair. In a five-character field the arithmetic gets quietly hostile. After
+    <code>abcd</code> there is one slot left and the tag character needs two, so it is discarded
+    with no message and no error. After <code>abc</code> there are two slots left, the tag
+    character takes both, and the letter typed next has nowhere to go. Somewhere else on the same
+    page, five zero-width spaces have filled the field completely and the input looks untouched.</p>
+
+  <h2>Two functions, one string, opposite answers</h2>
+
+  <p>Length is not the only test that gives two answers. Collation does it too. In Node 22,
+    <code>"sample" === "\u200Bsample"</code> is <code>false</code>, and
+    <code>"sample".localeCompare("\u200Bsample")</code> returns <code>0</code> &mdash; the collator
+    treats the zero-width space as ignorable and reports the two strings as equal. Swap the
+    zero-width space for a no-break space and <code>localeCompare</code> returns <code>1</code>.
+    So a duplicate check built on collation will reject the zero-width version as already taken
+    while a strict comparison treats it as brand new, and both are behaving exactly as
+    specified.</p>
+
+  <p>That is the pattern, not the exception. Every layer that touches your string has its own
+    definition of nothing, and they were each written for a different job. Trimmers care about
+    separators. Normalizers care about canonical equivalence. Collators care about sort weight.
+    Length cares about code units. None of them is wrong, and none of them agrees with the
+    others.</p>
+
+  <h2>A blank check that actually works</h2>
+
+  <p>Order matters, and this is the part most snippets get wrong. Normalize <em>first</em>, so the
+    exotic spaces become a real space; strip the format characters next, because no normalization
+    form will touch them; trim last, to take off the space that step one manufactured.</p>
+
+  <p><code>const blank = (s) =&gt; s.normalize(&quot;NFKC&quot;).replace(/[&#92;u00AD&#92;u180E&#92;u200B-&#92;u200F&#92;u202A-&#92;u202E&#92;u2060-&#92;u206F&#92;uFEFF&#92;uFFF9-&#92;uFFFB]/gu, &quot;&quot;).trim().length === 0;</code></p>
+
+  <p><code>import unicodedata, re<br>
+    CF = re.compile(&quot;[&#92;u00AD&#92;u180E&#92;u200B-&#92;u200F&#92;u202A-&#92;u202E&#92;u2060-&#92;u206F&#92;uFEFF&#92;uFFF9-&#92;uFFFB]&quot;)<br>
+    def blank(s): return CF.sub(&quot;&quot;, unicodedata.normalize(&quot;NFKC&quot;, s)).strip() == &quot;&quot;</code></p>
+
+  <p>Neither snippet touches U+3164, U+1160, U+115F or U+FFA0, because those are letters and no
+    whitespace or format filter will ever see them. Add them to the class if your data comes from
+    anywhere near a blank-name generator. Leave U+200C, U+200D and U+FE0F out of it entirely unless
+    the text has no emoji and no Arabic, Persian or Devanagari &mdash; removing the joiner is what
+    splits a family emoji into separate people.</p>
+
+  <h2>What this page does not tell you</h2>
+
+  <p>Nothing here tells you which character a particular site&rsquo;s name field will accept. That
+    is that site&rsquo;s validator, it changes without notice, and the only way to know is to try
+    it &mdash; a page that hands you &ldquo;the&rdquo; character for a blank name is guessing on
+    your behalf. If you want the characters themselves rather than an explanation of them, the
+    <a href="/invisible-characters">list of invisible Unicode characters</a> has copy buttons and
+    says which ones survive which validators.</p>
+
+  <p>The numbers are from the runtimes on this machine, and one detail is worth carrying away:
+    the Python here carries Unicode 15.1.0 while Node here carries Unicode 17.0. Two runtimes, two
+    versions of the standard, potentially two answers to the same normalization question. Run the
+    table on your own stack before you build anything that has to agree with someone else&rsquo;s.</p>
+
+  <p class="crosslink">Measured 2026-09-25 with Python 3.13.14 (<code>unicodedata</code> 15.1.0),
+    Node 22.22.2 (ICU 78.2, Unicode 17.0) and Chromium 153 via Playwright. Related:
+    <a href="/invisible-character">what an invisible character does to a form field</a>,
+    <a href="/invisible-text">the two families of invisible text</a>,
+    <a href="/zero-width-space">the zero-width space remover</a>,
+    <a href="/tag-characters">tag characters</a> that hide a whole message and cost two code units
+    each, <a href="/line-separators">U+2028 and U+2029</a> that trim like whitespace but never
+    become a space, and <a href="/token-cost">what invisible characters cost you in tokens</a>.</p>
+
+  <footer class="foot">
+    <a href="/about">About</a> &middot; <a href="/privacy">Privacy</a> &middot; <a href="/contact">Contact</a> &middot; <a href="https://github.com/f6946672/stripinvisible/blob/main/empty-character.html">Source</a>
+  </footer>
+</main>
+<!-- Cloudflare Web Analytics -->
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token":"20874485db814b21a0a76d82d7f9b4de"}'></script>
+</body>
+</html>
