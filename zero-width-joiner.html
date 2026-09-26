@@ -1,0 +1,312 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Zero-Width Joiner (U+200D): What It Does, and Why One of Them Doubles a Text Message</title>
+<meta name="description" content="U+200D is the invisible character that glues emoji into one picture. Measured: the four-person family emoji is 7 code points but 11 billed units, 10,000 joiners in a row count as one character, and one stray joiner flips a 100-character SMS from GSM-7 to UCS-2 and from one segment to two.">
+<link rel="canonical" href="https://stripinvisible.com/zero-width-joiner">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://stripinvisible.com/zero-width-joiner">
+<meta property="og:title" content="Zero-Width Joiner (U+200D): What It Does, and Why One of Them Doubles a Text Message">
+<meta property="og:description" content="The one invisible character that is supposed to be there. Measured: 7 code points drawn as 1, ten thousand joiners counting as a single character, and a hundred-character text message that becomes two because of one U+200D.">
+<meta name="twitter:card" content="summary">
+<meta property="og:image" content="https://stripinvisible.com/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:image" content="https://stripinvisible.com/og-image.png">
+
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/styles.css">
+<style>
+  .zwj-mark { background: #ffd9a0; outline: 1px dashed #b4701a; border-radius: 2px; }
+  .zwj-preview { margin-top: .75rem; padding: .6rem .7rem; border: 1px solid var(--line, #ddd); border-radius: 6px; word-break: break-all; line-height: 2; }
+  .zwj-box { min-height: 6.5rem; resize: vertical; }
+  .hint { font-size: .92rem; opacity: .8; }
+  .zwj-actions { margin: .6rem 0; }
+</style>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebPage",
+      "name": "Zero-Width Joiner (U+200D): What It Does, and Why One of Them Doubles a Text Message",
+      "url": "https://stripinvisible.com/zero-width-joiner",
+      "description": "What U+200D ZERO WIDTH JOINER does, why it survives trim and every normalization form, how many billed units an emoji ZWJ sequence costs in SMS, and how to remove stray joiners without splitting the emoji they hold together."
+    },
+    {
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "Strip Invisible", "item": "https://stripinvisible.com/" },
+        { "@type": "ListItem", "position": 2, "name": "Zero-Width Joiner" }
+      ]
+    },
+    {
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "What does a zero-width joiner do?",
+          "acceptedAnswer": { "@type": "Answer", "text": "U+200D tells the renderer to draw the characters on either side of it as one glyph instead of two. It is what turns four separate people into a single family emoji. It paints no ink and takes no horizontal space, and it is the only invisible character that is usually there on purpose." }
+        },
+        {
+          "@type": "Question",
+          "name": "Can I remove U+200D from my text?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Only if it is not holding an emoji together. Measured: the four-person family emoji is one grapheme cluster of seven code points; deleting the three joiners leaves four code points and four separate emoji on screen. Strip joiners that are not sitting between two emoji, and leave the rest alone." }
+        },
+        {
+          "@type": "Question",
+          "name": "Why does one invisible character double my SMS cost?",
+          "acceptedAnswer": { "@type": "Answer", "text": "SMS gives you 140 bytes. GSM-7 packs 160 characters into that; UCS-2 spends two bytes per character and gives you 70. U+200D is not in the GSM-7 alphabet, so a single one forces the whole message into UCS-2. Measured: a hundred characters of plain Latin text is one segment; the same hundred characters with one U+200D in the middle is two." }
+        },
+        {
+          "@type": "Question",
+          "name": "How many characters is a family emoji?",
+          "acceptedAnswer": { "@type": "Answer", "text": "All of these are true at once, measured on Node 22 with Unicode 17.0: the four-person family emoji is 1 grapheme cluster, 7 code points, 11 UTF-16 code units, and 25 bytes of UTF-8. SMS bills the 11. Six of them fit in one message at 66 of 70 units; seven need two segments." }
+        },
+        {
+          "@type": "Question",
+          "name": "Is any sequence with a zero-width joiner valid?",
+          "acceptedAnswer": { "@type": "Answer", "text": "No. A well-formed ZWJ sequence may only contain characters with the Emoji property, emoji presentation sequences, or emoji modifier sequences. Tested here: U+2605 BLACK STAR has Emoji=false so it cannot join, while U+2B50 WHITE MEDIUM STAR has Emoji=true and can. When a renderer does not have the combination, the joiners are ignored and the pieces are drawn separately." }
+        }
+      ]
+    }
+  ]
+}
+</script>
+</head>
+<body>
+<main>
+
+  <nav class="crumbs" aria-label="Breadcrumb">
+    <a href="/">Strip Invisible</a> &rsaquo; <span>Zero-Width Joiner</span>
+  </nav>
+
+  <h1>The zero-width joiner holds emoji together &mdash; and one stray copy of it halves your text-message budget</h1>
+
+  <p class="lede"><strong>Short answer:</strong> U+200D ZERO WIDTH JOINER paints no ink and takes up
+    no width, and it has exactly one job: tell the renderer to draw what surrounds it as a
+    <em>single</em> glyph. It is what turns four separate people &mdash;
+    <span aria-label="woman, woman, girl, boy">&#128105;&#128105;&#128103;&#128102;</span> &mdash;
+    into one family:
+    <span aria-label="family emoji">&#128105;&#8205;&#128105;&#8205;&#128103;&#8205;&#128102;</span>.
+    It is also the invisible character that refuses to leave. JavaScript&rsquo;s
+    <code>trim()</code> keeps it, Python&rsquo;s <code>strip()</code> keeps it, and all four
+    normalization forms hand it back byte-identical. And it is expensive. Measured against the
+    GSM&nbsp;03.38 alphabet, a hundred characters of plain text cost one segment to send. The same
+    hundred characters with a single U+200D buried in the middle cost <strong>two</strong>, because
+    one character outside that alphabet pushes the entire message into UCS-2, where the limit falls
+    from 160 to 70.</p>
+
+  <h2>The one invisible character that is supposed to be there</h2>
+
+  <p>Almost every other character on this site is an accident. A zero-width space arrives because
+    somebody copied text out of a document. A byte-order mark arrives because something saved a file
+    with a signature. Nobody wanted them.</p>
+
+  <p>U+200D is different. It is load-bearing. Remove it and you do not clean the text up &mdash;
+    you break a picture that a person chose. That single fact explains most of the confusion around
+    it, because the usual advice for invisible characters is &ldquo;strip them all out&rdquo;, and
+    this is the one case where that advice does real damage.</p>
+
+  <p>Its vital statistics, measured on this machine: general category <code>Cf</code> (a format
+    character, not whitespace), bidi class <code>BN</code>, one UTF-16 code unit, three bytes of
+    UTF-8. It is not whitespace to any trimmer, and unlike the six exotic spaces it never
+    normalizes into anything else. NFC, NFD, NFKC and NFKD all return it unchanged.</p>
+
+  <h2>Seven code points drawn as one, and no ceiling on how long that gets</h2>
+
+  <p>Here is the four-person family emoji measured four ways at once on Node 22.22.2 (ICU 78.2,
+    Unicode 17.0). Every number in this row is correct. They just answer different questions.</p>
+
+  <div class="scroll">
+    <table>
+      <thead>
+        <tr><th>Text</th><th>What you see</th><th>Code points</th><th>UTF-16</th><th>UTF-8 bytes</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="name">family of four</td><td class="cp">1</td><td class="cp">7</td><td class="cp">11</td><td class="cp">25</td></tr>
+        <tr><td class="name">woman astronaut</td><td class="cp">1</td><td class="cp">3</td><td class="cp">5</td><td class="cp">11</td></tr>
+        <tr><td class="name">thumbs up, medium skin tone</td><td class="cp">1</td><td class="cp">2</td><td class="cp">4</td><td class="cp">8</td></tr>
+        <tr><td class="name">one lone U+200D</td><td class="cp">1</td><td class="cp">1</td><td class="cp">1</td><td class="cp">3</td></tr>
+        <tr><td class="name">10,000 U+200D in a row</td><td class="cp">1</td><td class="cp">10,000</td><td class="cp">10,000</td><td class="cp">30,000</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>Read the last row again. Ten thousand joiners, thirty thousand bytes, and a grapheme
+    segmenter calls it <strong>one character</strong>. There is no rule anywhere in the standard
+    that caps how many joiners may pile up, so &ldquo;one character&rdquo; is a unit with no upper
+    length at all. Put an <code>a</code> in front of a thousand joiners and the segmenter still
+    reports one character; put a <code>b</code> after them and it reports two, because the letter
+    after the run starts a new cluster. A trailing joiner never starts one, which is why a paste
+    that ends in U+200D can quietly glue itself onto whatever you type next.</p>
+
+  <h2>Two levels of the same string, two different answers</h2>
+
+  <p>This is where people talk past each other. Ask whether the family emoji contains a woman and
+    you get two defensible answers, depending on which level of the string you ask at.</p>
+
+  <p>At the grapheme level &mdash; the level that models &ldquo;what a person thinks of as one
+    character&rdquo; &mdash; the joiner is not a separate thing you can find. It has been absorbed
+    into the cluster that follows the preceding emoji, so a search for it comes back empty and a
+    search for one of the people comes back empty too. At the scalar level the joiner is sitting
+    right there at a known position, and a search for it succeeds. Both are correct. Neither is
+    lying.</p>
+
+  <p>The uncomfortable part is that the same language can change its answer between versions. One
+    widely used language counted the family emoji as four characters and reported that it did
+    <em>not</em> contain the woman; a later version of the same language counts it as one and
+    reports that it does. Identical bytes, identical question, opposite result &mdash; and any code
+    written against the first answer silently changes behaviour.</p>
+
+  <p>The same split shows up inside a single standard library. In one of them, a culture-aware
+    substring search steps over the format character as if it were not there, while the ordinal
+    replace on the very same string refuses to, because one consults collation tables and the other
+    compares numbers. A find that succeeds and a replace that fails, on one string, in one runtime.
+    If your cleanup pipeline mixes the two, it will report that it found the problem and then leave
+    it untouched.</p>
+
+  <h2>Where it quietly costs money</h2>
+
+  <p>Text messaging is billed per segment, and a segment is 140 bytes. GSM-7 squeezes 160
+    characters into those bytes. UCS-2 spends two bytes per character and fits 70. Concatenated
+    messages lose a little more to the reassembly header: 153 per segment for GSM-7, 67 for UCS-2.
+    One character outside the GSM-7 alphabet moves the whole message into the second column.</p>
+
+  <p>U+200D is not in that alphabet, and neither is any emoji. Measured:</p>
+
+  <div class="scroll">
+    <table>
+      <thead>
+        <tr><th>Message</th><th>Encoding</th><th>Units</th><th>Segments</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="name">100 characters of plain Latin text</td><td class="cp">GSM-7</td><td class="cp">100 of 160</td><td class="cp">1</td></tr>
+        <tr><td class="name">the same 100 characters, one U+200D in the middle</td><td class="cp">UCS-2</td><td class="cp">101 of 70</td><td class="cp">2</td></tr>
+        <tr><td class="name">a 93-character delivery notice</td><td class="cp">GSM-7</td><td class="cp">93 of 160</td><td class="cp">1</td></tr>
+        <tr><td class="name">that notice with one U+200D after a colon</td><td class="cp">UCS-2</td><td class="cp">93 of 70</td><td class="cp">2</td></tr>
+        <tr><td class="name">six family emoji</td><td class="cp">UCS-2</td><td class="cp">66 of 70</td><td class="cp">1</td></tr>
+        <tr><td class="name">seven family emoji</td><td class="cp">UCS-2</td><td class="cp">77 of 67</td><td class="cp">2</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>Six family emoji fill a text message. Six pictures, sixty-six of the seventy units, one
+    segment &mdash; and the seventh one costs you a second message. A marketing tool that counts
+    &ldquo;characters&rdquo; by looking at the rendered string will tell you that a campaign with
+    seven family emoji is seven characters long, which is true on screen and wrong on the invoice.</p>
+
+  <p>Nothing about this is a bug. The billing follows the encoding, the encoding follows the
+    alphabet, and the alphabet predates emoji by about two decades. The joiner just happens to be
+    the character most likely to arrive without anyone typing it, because it comes along
+    invisibly whenever somebody pastes an emoji out of a document or a chat window.</p>
+
+  <h2>Not every joiner is allowed to join</h2>
+
+  <p>You cannot put U+200D between any two characters and expect a combined glyph. A well-formed
+    sequence may only be built from characters that carry the Emoji property, from emoji
+    presentation sequences, and from emoji modifier sequences. Everything else is malformed.</p>
+
+  <p>Tested here against Unicode 17.0: <code>U+2605 BLACK STAR</code> has <code>Emoji=false</code>,
+    so a flag-star-square sequence that uses it is not well-formed and no renderer is obliged to
+    draw anything but the pieces. <code>U+2B50 WHITE MEDIUM STAR</code> has
+    <code>Emoji=true</code> and is fine. U+200D itself has <code>Emoji=false</code>, which is worth
+    knowing before you write a validation rule that assumes otherwise. Some characters also need a
+    variation selector to be drawn in colour at all, some must never be followed by one, and the
+    two lists are not the same list.</p>
+
+  <p>And even a well-formed sequence is only a request. The standard&rsquo;s own fallback rule is
+    that a renderer which does not have the combination ignores the joiners and draws the
+    components separately. That is why these sequences are supposed to be chosen so that the
+    fallback still reads sensibly &mdash; four people in a row is a reasonable failure mode for a
+    family, whereas half a flag is not.</p>
+
+  <h2>Same bytes, three screens</h2>
+
+  <p>Whether you get the joined glyph is decided by the font and the renderer, not by the
+    encoding. The reports are genuinely contradictory. Someone who went looking for a terminal that
+    handles these sequences correctly came back convinced that not one of them does. Someone else
+    who spent the same year adding wide-character support to a shell found support surprisingly
+    good across the emulators they tried on two operating systems, and a third person named one
+    that passes a published test.</p>
+
+  <p>Practical versions of the same story are easy to reproduce. A script that prints a joined
+    emoji renders it correctly in two well-known terminal applications and as two separate emoji in
+    the terminal pane embedded in an IDE. Both programs received the same bytes. One had the
+    ligature data and one did not. If you are debugging this, the file is fine; the font is the
+    variable.</p>
+
+  <h2>The cleanup that breaks your emoji</h2>
+
+  <p>The common sanitising snippet is a character class covering the whole zero-width block, and it
+    catches U+200D along with the rest. Run it over the family emoji and the single picture becomes
+    four separate people: seven code points down to four, one grapheme cluster up to four. The text
+    is shorter, it is genuinely cleaner by any byte-level measure, and the person who wrote it now
+    sees something else on screen.</p>
+
+  <p>Joiners also do real work outside emoji, shaping letter forms in scripts such as Sinhala,
+    Devanagari and Arabic, so a blanket strip is not merely ugly, it is wrong in several languages
+    at once.</p>
+
+  <p>The safe version removes only the joiners that are not holding anything together &mdash; the
+    ones with no emoji on both sides:</p>
+
+  <p><code>const loose = (s) =&gt; s.replace(/(?&lt;!&#92;p{Emoji})&#92;u200D+|&#92;u200D+(?!&#92;p{Emoji})/gu, &quot;&quot;);</code></p>
+
+  <p>Tested on this machine: the family emoji and the woman astronaut come through untouched, a
+    joiner sitting in the middle of ordinary Latin text is removed, and a joiner trailing after an
+    emoji is removed. That last one matters more than it looks, because a trailing joiner with
+    nothing to attach to is a stray character waiting to merge with the next thing typed.</p>
+
+  <h2>Measure yours</h2>
+
+  <p>Paste text in and it is counted here, in the browser. Nothing is uploaded and nothing leaves
+    the page.</p>
+
+  <textarea id="zwj-input" class="zwj-box" spellcheck="false" aria-label="Text to measure"></textarea>
+
+  <div class="zwj-actions">
+    <button type="button" id="zwj-clean">Remove joiners that are not between emoji</button>
+  </div>
+
+  <div id="zwj-out"></div>
+
+  <p>Finding one by eye is not realistic. Browser find-in-page will not match it, and it does not
+    move the cursor. Use the <a href="/zero-width-space">zero-width space remover</a> if what you
+    are chasing is the space rather than the joiner, or the
+    <a href="/invisible-characters">full list of invisible Unicode characters</a> if you are not sure
+    which one you have.</p>
+
+  <h2>What this page does not tell you</h2>
+
+  <p>Which emoji combinations your recipients&rsquo; devices will render. That depends on the font
+    shipped with their operating system and the version of the standard it was built against, and
+    no amount of checking here tells you what a phone you have never seen will draw. If a sequence
+    matters commercially, send it to a real handset.</p>
+
+  <p>The SMS numbers are the published GSM&nbsp;03.38 limits &mdash; 160 and 153 for GSM-7, 70 and
+    67 for UCS-2 &mdash; applied to strings measured on this machine. Carriers and messaging
+    platforms add their own rules on top, and some of them rewrite characters for you before
+    billing. Treat the segment counts as what the encoding rules imply, not as what any particular
+    invoice will say.</p>
+
+  <p class="crosslink">Measured 2026-09-26 with Node 22.22.2 (ICU 78.2, Unicode 17.0) and Python
+    3.13.14 (<code>unicodedata</code> 15.1.0). Related:
+    <a href="/empty-character">why there is no empty character</a>,
+    <a href="/invisible-character">what an invisible character does to a form field</a>,
+    <a href="/invisible-text">the two families of invisible text</a>,
+    <a href="/tag-characters">tag characters</a> that hide a whole message,
+    <a href="/token-cost">what invisible characters cost you in tokens</a>, and
+    <a href="/clean-json">the JSON cleaner</a> if it is a payload that will not parse.</p>
+
+  <footer class="foot">
+    <a href="/about">About</a> &middot; <a href="/privacy">Privacy</a> &middot; <a href="/contact">Contact</a> &middot; <a href="https://github.com/f6946672/stripinvisible/blob/main/zero-width-joiner.html">Source</a>
+  </footer>
+</main>
+<script src="/zwj.js"></script>
+<!-- Cloudflare Web Analytics -->
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token":"20874485db814b21a0a76d82d7f9b4de"}'></script>
+</body>
+</html>
