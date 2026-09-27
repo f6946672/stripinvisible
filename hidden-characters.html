@@ -1,0 +1,346 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hidden Characters: Find Them in Text, Then Find Them in a File</title>
+<meta name="description" content="Paste text in and find every hidden character: which code point, which line, which byte. Plus what cat -A, od, xxd, wc, grep and cmp actually print for U+200B, U+00A0, U+FEFF, U+200D and the rest, measured on a real shell.">
+<link rel="canonical" href="https://stripinvisible.com/hidden-characters">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://stripinvisible.com/hidden-characters">
+<meta property="og:title" content="Hidden Characters: Find Them in Text, Then Find Them in a File">
+<meta property="og:description" content="Find every hidden character in your text, then find them in a file. What each command-line tool prints, measured.">
+<meta name="twitter:card" content="summary">
+<meta property="og:image" content="https://stripinvisible.com/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:image" content="https://stripinvisible.com/og-image.png">
+
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/styles.css">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebPage",
+      "name": "Hidden Characters: Find Them in Text, Then Find Them in a File",
+      "url": "https://stripinvisible.com/hidden-characters",
+      "description": "Find every hidden character in a pasted string or a file on disk, and see what each command-line tool prints for it."
+    },
+    {
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "Strip Invisible", "item": "https://stripinvisible.com/" },
+        { "@type": "ListItem", "position": 2, "name": "Hidden Characters" }
+      ]
+    },
+    {
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "How do I find hidden characters in a file?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Paste the text into the checker at the top of this page for an instant answer, or use cat -A on the file, which prints every byte that is not plain ASCII in a visible M- notation. od -c and xxd show the raw bytes. Measured: U+200B comes out as M-bM-^@M-^K, U+00A0 as M-BM- followed by a space, and U+FEFF as M-oM-;M-?." }
+        },
+        {
+          "@type": "Question",
+          "name": "Why does my grep not match text that is right there?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Because the invisible character sits inside the word. Measured: a file containing Hello followed by U+200B followed by World returns 0 matches for the pattern HelloWorld, and 1 match for Hello. Use grep -P with a code point such as \\x{200B} to search for the character itself." }
+        },
+        {
+          "@type": "Question",
+          "name": "Does stripping \\p{C} remove all hidden characters?",
+          "acceptedAnswer": { "@type": "Answer", "text": "No. Measured against nine invisible characters, the \\p{C} pattern catches six and misses three: the no-break space U+00A0, the line separator U+2028 and the Hangul filler U+3164. The first two belong to the separator categories and the third is a letter. A sweep for anything outside printable ASCII catches all nine." }
+        },
+        {
+          "@type": "Question",
+          "name": "Why do wc and awk report different lengths for the same line?",
+          "acceptedAnswer": { "@type": "Answer", "text": "On a shell where wchar_t is 16 bits, wc -m counts UTF-16 code units rather than code points. Measured: a line of twelve code points containing one tag character was reported as 13 by wc -m and 11 by awk length, which counts correctly. The overcount only happens for characters outside the basic multilingual plane." }
+        }
+      ]
+    }
+  ]
+}
+</script>
+</head>
+<body>
+<main>
+
+  <nav class="crumbs" aria-label="Breadcrumb">
+    <a href="/">Strip Invisible</a> &rsaquo; <span>Hidden Characters</span>
+  </nav>
+
+  <h1>Hidden characters: what the terminal sees that you cannot</h1>
+
+  <p class="lede"><strong>Short answer:</strong> paste your text into the box below and it tells you
+    whether there are any, how many, and exactly which code point each one is. A hidden character is
+    an ordinary Unicode code point that paints no ink &mdash; U+200B, U+00A0, U+FEFF, U+200D and a
+    dozen more. Your editor draws nothing for it, your editor&rsquo;s search will not match it, and
+    <code>diff</code> will happily print two lines that look byte-for-byte identical on screen and
+    tell you they differ. Nothing here is uploaded; the scan runs in your browser.</p>
+
+  <div class="tool">
+    <div class="pane">
+      <label for="hc-in">Paste the text to scan</label>
+      <textarea id="hc-in" spellcheck="false" placeholder="Paste a line of copy, a config value, a filename that will not match..."></textarea>
+      <fieldset>
+        <legend>What to count</legend>
+        <label class="opt check"><input type="checkbox" id="hc-wide"> Also count spaces that are not the space bar, line separators and Hangul fillers</label>
+      </fieldset>
+      <div class="row">
+        <button class="primary" type="button" id="hc-scan">Scan</button>
+        <button type="button" id="hc-clear">Clear</button>
+      </div>
+    </div>
+    <div class="pane">
+      <label>What it found</label>
+      <div id="hc-out">
+        <p class="verdict idle">Nothing scanned yet.</p>
+      </div>
+    </div>
+  </div>
+
+  <p>The box answers one question &mdash; is anything there. When the text lives in a file on disk
+    rather than in your clipboard, the rest of this page is what to run instead, and what each
+    command actually prints. Every number below was measured on this machine against files built
+    from a single known code point, so the outputs are reproducible rather than remembered.</p>
+
+  <h2>Nine invisible characters, nine different strings</h2>
+
+  <p>The most useful command is also the oldest one. <code>cat -A</code> does not interpret the
+    bytes as text at all: it walks them and renders anything outside printable ASCII in a notation
+    you can read. That is what makes it better than an editor with a &ldquo;show invisible
+    characters&rdquo; setting, because the editor decides what to draw and the notation does
+    not.</p>
+
+  <p>Measured, one file per character, each holding <code>Hello</code> + the character +
+    <code>World</code>:</p>
+
+  <div class="scroll">
+    <table>
+      <thead>
+        <tr><th>Code point</th><th>Name</th><th>What <code>cat -A</code> prints</th><th>Bytes</th><th>Adds to <code>wc -L</code></th><th>Splits <code>wc -w</code>?</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="cp">U+200B</td><td class="name">ZERO WIDTH SPACE</td><td class="cp">M-bM-^@M-^K</td><td class="cp">3</td><td class="cp">0</td><td class="cp">no</td></tr>
+        <tr><td class="cp">U+00A0</td><td class="name">NO-BREAK SPACE</td><td class="cp">M-BM-<span class="ent">space</span></td><td class="cp">2</td><td class="cp">1</td><td class="cp">yes</td></tr>
+        <tr><td class="cp">U+FEFF</td><td class="name">ZERO WIDTH NO-BREAK SPACE</td><td class="cp">M-oM-;M-?</td><td class="cp">3</td><td class="cp">0</td><td class="cp">no</td></tr>
+        <tr><td class="cp">U+2028</td><td class="name">LINE SEPARATOR</td><td class="cp">M-bM-^@M-(</td><td class="cp">3</td><td class="cp">1</td><td class="cp">yes</td></tr>
+        <tr><td class="cp">U+200D</td><td class="name">ZERO WIDTH JOINER</td><td class="cp">M-bM-^@M-^M</td><td class="cp">3</td><td class="cp">0</td><td class="cp">no</td></tr>
+        <tr><td class="cp">U+00AD</td><td class="name">SOFT HYPHEN</td><td class="cp">M-BM--</td><td class="cp">2</td><td class="cp">0</td><td class="cp">no</td></tr>
+        <tr><td class="cp">U+2060</td><td class="name">WORD JOINER</td><td class="cp">M-bM-^AM-<span class="ent">space</span></td><td class="cp">3</td><td class="cp">0</td><td class="cp">no</td></tr>
+        <tr><td class="cp">U+E0020</td><td class="name">TAG CHARACTER</td><td class="cp">M-sM-<span class="ent">space</span>M-^@M-<span class="ent">space</span></td><td class="cp">4</td><td class="cp">0</td><td class="cp">no</td></tr>
+        <tr><td class="cp">U+3164</td><td class="name">HANGUL FILLER</td><td class="cp">M-cM-^EM-$</td><td class="cp">3</td><td class="cp">2</td><td class="cp">no</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>Two rows are worth staring at. The no-break space comes out as <code>M-BM-</code> followed by
+    an actual space, and the soft hyphen comes out as <code>M-BM--</code> &mdash; a hyphen. Both
+    look like content you typed. If you are skimming <code>cat -A</code> output for something
+    unusual, those two are the ones that slide past, even though the notation is technically telling
+    you the truth.</p>
+
+  <p>The other thing the table shows is that these characters are not interchangeable. The Hangul
+    filler is the only one that adds two columns of display width, the no-break space and the line
+    separator add one, and the remaining six add nothing at all. Width is a fingerprint: it narrows
+    down which one you are holding before you have identified it.</p>
+
+  <h2>The cleanup pattern everybody recommends misses three of them</h2>
+
+  <p>The standard advice for removing invisible characters is a character class built on the
+    Unicode &ldquo;other&rdquo; category, <code>\p{C}</code>, or its format subcategory,
+    <code>\p{Cf}</code>. It is in the accepted answers, it is in the sanitising snippets, and it is
+    wrong at the edges.</p>
+
+  <p>Measured with <code>grep -P</code> against all nine files above:</p>
+
+  <div class="scroll">
+    <table>
+      <thead>
+        <tr><th>Pattern</th><th>U+200B</th><th>U+00A0</th><th>U+FEFF</th><th>U+2028</th><th>U+200D</th><th>U+00AD</th><th>U+2060</th><th>U+E0020</th><th>U+3164</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="name"><code>\p{Cf}</code></td><td class="cp">hit</td><td class="cp">&mdash;</td><td class="cp">hit</td><td class="cp">&mdash;</td><td class="cp">hit</td><td class="cp">hit</td><td class="cp">hit</td><td class="cp">hit</td><td class="cp">&mdash;</td></tr>
+        <tr><td class="name"><code>\p{C}</code></td><td class="cp">hit</td><td class="cp">&mdash;</td><td class="cp">hit</td><td class="cp">&mdash;</td><td class="cp">hit</td><td class="cp">hit</td><td class="cp">hit</td><td class="cp">hit</td><td class="cp">&mdash;</td></tr>
+        <tr><td class="name"><code>[^\x20-\x7e\x09]</code></td><td class="cp">hit</td><td class="cp">hit</td><td class="cp">hit</td><td class="cp">hit</td><td class="cp">hit</td><td class="cp">hit</td><td class="cp">hit</td><td class="cp">hit</td><td class="cp">hit</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>Six of nine, twice. The three that survive are the no-break space and the line separator,
+    which are separators rather than format characters, and the Hangul filler, which is a letter
+    with a blank glyph and matches no &ldquo;other&rdquo; class at all. Those are not obscure
+    choices: the no-break space is the one people paste by accident most often, and the Hangul
+    filler is what most blank-name generators hand out.</p>
+
+  <p>The third row is the boring one and the one that works. Sweeping for anything outside
+    printable ASCII and tab matched nine of nine and returned nothing on a clean control file. That
+    is the minority position &mdash; the advice usually given is to declare what you will accept
+    rather than enumerate what you will reject &mdash; and on this evidence the minority is right,
+    because an allow-list cannot be surprised by a character nobody thought to put on the
+    deny-list.</p>
+
+  <p>It is also worth saying what that sweep costs you: it will flag every accented letter and every
+    CJK character in the file. It is the right pattern for identifiers, config keys and filenames.
+    It is the wrong one for prose.</p>
+
+  <h2>Two counters, one line, different answers</h2>
+
+  <p>People reach for <code>wc -m</code> to find out how many characters a file holds, and it is
+    usually right. It was wrong here.</p>
+
+  <p>A line of <code>Hello</code> + U+E0020 + <code>World</code> is twelve code points.
+    <code>wc -m</code> reported thirteen. <code>awk '{print length($0)}'</code> reported eleven,
+    which is correct once you take the newline off. The same thing happened with an emoji: a
+    four-code-point line was reported as five. A line of plain ASCII was reported correctly at
+    four.</p>
+
+  <p>The pattern is the cause. On a shell where the wide character type is sixteen bits, a code
+    point outside the basic multilingual plane needs two of them, and <code>wc -m</code> counts the
+    storage units rather than the characters. So a single tag character inflates the count by one,
+    and so does every emoji, and nothing in the basic plane does. If you are using
+    <code>wc -m</code> to sanity-check a length, it agrees with reality only until somebody pastes
+    something colourful into the file.</p>
+
+  <p>The same command disagrees with itself in a different way. <code>wc -w</code> counted
+    <em>two</em> words for the no-break space and the line separator, and <em>one</em> for the other
+    seven &mdash; the same one word as a control file with no character in it at all. So
+    <code>wc</code> considers a no-break space a word boundary and a zero-width space not a word
+    boundary, which is defensible, and it also considers a line separator a word boundary while
+    <code>wc -l</code> refuses to count it as a line break, which is harder to defend.</p>
+
+  <h2>Finding the position instead of counting</h2>
+
+  <p>Counting tells you something is there. To find out where, stop treating the file as text.</p>
+
+  <p><code>cmp</code> compares bytes and gives you the offset directly. Against a file holding
+    <code>Hello</code> + U+200B + <code>World</code> and a clean <code>HelloWorld</code>, it
+    reported <em>differ: byte 6, line 1</em>. Six is the first byte of the three-byte character,
+    which is the answer you wanted and the answer no text-based tool will give you.</p>
+
+  <p><code>diff</code> on the same pair prints this:</p>
+
+  <p><code>1c1<br>&lt; HelloWorld<br>---<br>&gt; HelloWorld</code></p>
+
+  <p>Two lines that render identically, separated by a marker saying they are not equal. This is
+    the moment most people conclude the tool is broken. It is not; the bytes differ and the terminal
+    is drawing the zero-width space as nothing, because that is what it is.</p>
+
+  <p>De-duplication has the same problem from the other side. A file with
+    <code>Hello</code> + U+200B + <code>World</code> on one line and a plain
+    <code>HelloWorld</code> on the next stays at two lines under <code>uniq</code> and under
+    <code>sort -u</code>. Two copies of the invisible version collapse to one, exactly as they
+    should. So the tools are consistent, and both results look wrong on screen.</p>
+
+  <h2>Searching: why your grep comes back empty</h2>
+
+  <p>The failure everyone hits first. A file holds <code>Hello</code>, a zero-width space, and
+    <code>World</code>. Searching for <code>HelloWorld</code> returns zero matches. Searching for
+    <code>Hello</code> returns one. The string you can see is not the string in the file, and the
+    pattern is matching the file.</p>
+
+  <p>To search for the character rather than around it, give grep the code point:</p>
+
+  <p><code>grep -P '\x{200B}' file.txt</code></p>
+
+  <p>Measured, that matches the file with the character and returns nothing on the clean one. The
+    same form works for the no-break space with <code>\x{00A0}</code> and for the tag characters
+    with <code>\x{E0020}</code>, so non-BMP code points are not a problem. What you cannot do is
+    type the character into the pattern, because your shell and your editor will both happily store
+    something you cannot check.</p>
+
+  <p>Note the <code>-P</code>. Without it, the escape is not interpreted and the pattern matches
+    nothing &mdash; a second way to get an empty result that looks identical to the first.</p>
+
+  <h2>The conversion that eats the rest of your line</h2>
+
+  <p>This one is worth knowing before you run it on anything you care about. Transliterating a file
+    down to ASCII sounds like a safe way to drop invisible characters, and GNU
+    <code>iconv</code> does not skip what it cannot convert &mdash; it stops.</p>
+
+  <p>Measured on the same <code>Hello</code> + U+200B + <code>World</code> file,
+    <code>iconv -f UTF-8 -t ASCII//TRANSLIT</code> printed <code>Hello</code> and nothing else, then
+    exited with an error at position 5. <code>World</code> was gone. The command did not remove the
+    invisible character from the middle of the line; it emitted everything up to the character and
+    abandoned the rest.</p>
+
+  <p>Adding <code>-c</code>, which omits unconvertible characters instead of failing, produced the
+    full <code>HelloWorld</code> and exited cleanly. If an ASCII conversion of a file comes out
+    short, this is usually why, and the exit status is the only warning you get.</p>
+
+  <p>The older approach still works and is safer for a one-off: hand <code>tr -d</code> the three
+    octal bytes of the character rather than the character itself.</p>
+
+  <p><code>tr -d '\342\200\213' &lt; file.txt</code></p>
+
+  <p>That removes U+200B and leaves everything else alone. The bytes are what U+200B looks like in
+    UTF-8, which is also what <code>od -c</code> will show you if you do not know them:
+    <code>342 200 213</code>.</p>
+
+  <h2>Where they come from, and why some of them are deliberate</h2>
+
+  <p>Three sources account for nearly all of it. Editors and word processors insert no-break spaces
+    and zero-width spaces as you type, and they travel with the text when you copy it. Something
+    saved a file with a signature and left a byte-order mark at the front &mdash; the three bytes
+    <code>EF BB BF</code>, which is why it turns up as <code>%EF%BB%BF</code> when a URL gets
+    copied out of a browser. And text that came out of a chat window, a document or a web page
+    carries whatever that source was using.</p>
+
+  <p>Not all of it is accidental, and this is the part that makes a blanket strip dangerous. A
+    zero-width space in the middle of a domain name is a well-known way to stop it being turned
+    into a shortened link, and it is also a documented way to get a URL past a link scanner while
+    every major browser still renders it clickable. People put these characters in on purpose. If
+    you are looking at a file and find one, the honest answer is that you cannot tell from the
+    character alone whether it was meant to be there.</p>
+
+  <p>The byte-order mark is the one case where position tells you something: it is at the very
+    front, it is three bytes, and <code>cat -A</code> renders it as <code>M-oM-;M-?</code>. The
+    rest can be anywhere &mdash; in the middle of a word, between two words, or at the end of a
+    line &mdash; which is what makes the &ldquo;it is always the first character in the file&rdquo;
+    rule that gets repeated for this problem so misleading. That rule is true of the byte-order
+    mark and of nothing else.</p>
+
+  <h2>Taking them out</h2>
+
+  <p>For a pasted string, the <a href="/zero-width-space">zero-width space remover</a> marks each
+    one in place before anything is deleted, and the
+    <a href="/invisible-characters">invisible Unicode list</a> has a scan that reports counts by
+    code point. For a file, <code>tr -d</code> with the octal bytes is the blunt instrument and
+    <code>grep -P</code> with the code point is the way to confirm you got them all. Run the scan
+    again after &mdash; that is the only check that means anything.</p>
+
+  <p>Leave the joiner alone unless you have looked at what surrounds it. U+200D is load-bearing in
+    an emoji sequence, and deleting it does not clean text up, it breaks a picture somebody chose.
+    See <a href="/zero-width-joiner">what a zero-width joiner does</a> before you strip one.</p>
+
+  <h2>What this page does not tell you</h2>
+
+  <p>Whether the character you found was put there deliberately. Some are, and nothing in the bytes
+    distinguishes an accident from an intention.</p>
+
+  <p>It also does not tell you which of these your own terminal will draw. The
+    <code>cat -A</code> strings above are GNU coreutils output; a different implementation may
+    render the same bytes in a different notation, and the <code>wc -L</code> widths come from that
+    implementation&rsquo;s idea of display width. The code points and byte counts are stable. The
+    notation is not.</p>
+
+  <p class="crosslink">Measured 2026-09-27 with GNU coreutils and GNU grep 3.0 on Windows via Git
+    Bash, cross-checked with Node 22.22.2 (ICU 78.2, Unicode 17.0) and Python 3.13.14.
+    Related: <a href="/invisible-characters">the full list of invisible characters</a>,
+    <a href="/invisible-character">what one does to a form field</a>,
+    <a href="/tag-characters">tag characters that hide a whole ASCII message</a>,
+    <a href="/line-separators">U+2028 and U+2029 in JSON</a>,
+    <a href="/empty-character">why there is no empty character</a>, and
+    <a href="/clean-json">the JSON cleaner</a> if it is a payload that will not parse.</p>
+
+  <footer class="foot">
+    <a href="/about">About</a> &middot; <a href="/privacy">Privacy</a> &middot; <a href="/contact">Contact</a> &middot; <a href="https://github.com/f6946672/stripinvisible/blob/main/hidden-characters.html">Source</a>
+  </footer>
+</main>
+<script src="/hidden.js"></script>
+<!-- Cloudflare Web Analytics -->
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token":"20874485db814b21a0a76d82d7f9b4de"}'></script>
+</body>
+</html>
