@@ -1,0 +1,348 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hidden Text: Who Can Still Read It After You Hide It</title>
+<meta name="description" content="Nine of the fourteen ways to make text invisible still hand it to the clipboard on select-all and copy. Measured in Chromium across every common hiding method, plus what git diff, git grep and a PDF redaction box actually do with text you cannot see.">
+<link rel="canonical" href="https://stripinvisible.com/hidden-text">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://stripinvisible.com/hidden-text">
+<meta property="og:title" content="Hidden Text: Who Can Still Read It After You Hide It">
+<meta property="og:description" content="Hiding text from the eye and hiding it from the clipboard are two different jobs. Measured: which methods survive copy, find-in-page, view-source and a screen reader.">
+<meta name="twitter:card" content="summary">
+<meta property="og:image" content="https://stripinvisible.com/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:image" content="https://stripinvisible.com/og-image.png">
+
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/styles.css">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebPage",
+      "name": "Hidden Text: Who Can Still Read It After You Hide It",
+      "url": "https://stripinvisible.com/hidden-text",
+      "description": "Which ways of hiding text on a web page actually keep it out of the clipboard, find-in-page, view-source and the accessibility tree, measured in Chromium."
+    },
+    {
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "Strip Invisible", "item": "https://stripinvisible.com/" },
+        { "@type": "ListItem", "position": 2, "name": "Hidden Text" }
+      ]
+    },
+    {
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "Does hidden text still get copied when you select all and paste?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Usually yes. Measured in Chromium across fourteen ways to make text invisible on screen, nine still put the text on the clipboard under select-all and copy: white text on a white background, transparent colour, opacity 0, font-size 0, clip-path, text-indent pushed off screen, absolute positioning off screen, the screen-reader-only clip pattern, and text covered by an opaque box. Only visibility hidden, display none, the hidden attribute and an HTML comment keep it out of both the clipboard and find-in-page." }
+        },
+        {
+          "@type": "Question",
+          "name": "Which CSS property hides text from the clipboard but not from the screen?",
+          "acceptedAnswer": { "@type": "Answer", "text": "user-select: none. Measured, it is the only method tested that leaves the text fully visible, findable with Ctrl+F and present in the source, while select-all and copy drops it. aria-hidden is the opposite: the text stays visible and copyable but disappears from the accessibility tree, so a screen reader never reads it." }
+        },
+        {
+          "@type": "Question",
+          "name": "Why does git show a change on a line that looks identical?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Because the difference is an invisible character. Measured: adding one zero-width space inside a word makes git print the old and new line looking byte-for-byte the same on screen, with a stat of one insertion and one deletion. git diff --word-diff exposes it, showing the word before and after with the character marked as added." }
+        },
+        {
+          "@type": "Question",
+          "name": "Does git diff --check catch a trailing invisible character?",
+          "acceptedAnswer": { "@type": "Answer", "text": "No. Measured, git diff --check exits with code 2 and prints a trailing whitespace warning for a line ending in a normal space, but exits 0 and prints nothing for a line ending in a no-break space or a zero-width space. The ignore-whitespace flags behave the same way: they suppress a change that is only a normal space, and leave a change that is only U+00A0 or U+200B reported as one insertion and one deletion." }
+        },
+        {
+          "@type": "Question",
+          "name": "Is text under a black redaction box in a PDF really removed?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Not by drawing the box. Measured on a hand-built PDF, adding a filled white rectangle over a line of text grew the file by 28 bytes and left the phrase byte-for-byte in the file, so a content-stream extractor still returned it. Deleting the text drawing operand instead removed it completely and left the rectangle in place. A PDF stores drawing instructions in order, so painting over text appends an instruction rather than taking one away." }
+        }
+      ]
+    }
+  ]
+}
+</script>
+</head>
+<body>
+<main>
+
+  <nav class="crumbs" aria-label="Breadcrumb">
+    <a href="/">Strip Invisible</a> &rsaquo; <span>Hidden Text</span>
+  </nav>
+
+  <h1>Hidden text: nine of the fourteen ways to hide it still hand it over</h1>
+
+  <p class="lede"><strong>Short answer:</strong> hidden text is text that is in the file but not on
+    the screen, and hiding it from the eye is a different job from hiding it from everything else.
+    Measured in Chromium across fourteen ways to make text invisible, <strong>nine still put the text
+    on the clipboard</strong> when you press Ctrl+A and Ctrl+C. White text on a white background,
+    <code>color: transparent</code>, <code>opacity: 0</code>, <code>font-size: 0</code>,
+    <code>clip-path</code>, text pushed off screen, the screen-reader-only clip pattern and text
+    sitting under an opaque box all survive the copy. Only four methods keep the text out of both the
+    clipboard and find-in-page &mdash; <code>visibility: hidden</code>, <code>display: none</code>,
+    the <code>hidden</code> attribute and an HTML comment &mdash; and all four are still in the
+    source.</p>
+
+  <div class="tool">
+    <div class="pane">
+      <label for="ht-word">Word to hide</label>
+      <input id="ht-word" type="text" value="SECRET-42" spellcheck="false">
+      <div class="opt">
+        <label for="ht-method">How to hide it</label>
+        <select id="ht-method"></select>
+      </div>
+      <div class="row">
+        <button class="primary" type="button" id="ht-copy">Test select-all + copy</button>
+        <button type="button" id="ht-find">Test Ctrl+F</button>
+        <button type="button" id="ht-source">Test view-source</button>
+      </div>
+    </div>
+    <div class="pane">
+      <label>Live preview &mdash; can you see the word?</label>
+      <div class="preview" id="ht-preview"></div>
+      <label>Result</label>
+      <div id="ht-out">
+        <p class="verdict idle">Nothing tested yet.</p>
+      </div>
+    </div>
+  </div>
+
+  <p>The three buttons do three different things, which is the whole point. The copy test builds a
+    selection over the preview exactly the way Ctrl+A does and reports what it produces; the find
+    test runs the same routine find-in-page uses; the source test checks the markup itself. Run all
+    three on the same method and you get the answer that matters, which is not &ldquo;is it
+    hidden&rdquo; but &ldquo;hidden from whom&rdquo;.</p>
+
+  <h2>Every method, measured against five readers</h2>
+
+  <p>Each row is one page, one word, and five independent checks: does anything get painted, does
+    select-all-then-copy carry the word, does find-in-page locate it, is it in the HTML source, and
+    does it appear in the accessibility tree that a screen reader walks. Nothing was inferred from
+    the spec &mdash; the <em>eyes</em> column is a pixel comparison of the element against a blank
+    region of the same size.</p>
+
+  <div class="scroll">
+    <table>
+      <thead>
+        <tr><th>Method</th><th>Eyes</th><th>Ctrl+A&nbsp;+&nbsp;copy</th><th>Ctrl+F</th><th>View-source</th><th>Screen reader</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="nm">no hiding at all</td><td class="cp">yes</td><td class="cp">yes</td><td class="cp">yes</td><td class="cp">yes</td><td class="cp">yes</td></tr>
+        <tr><td class="nm">color: #fff on white</td><td class="cp">no</td><td class="cp">yes</td><td class="cp">yes</td><td class="cp">yes</td><td class="cp">yes</td></tr>
+        <tr><td class="nm">color: transparent</td><td class="cp">no</td><td class="cp">yes</td><td class="cp">yes</td><td class="cp">yes</td><td class="cp">yes</td></tr>
+        <tr><td class="nm">opacity: 0</td><td class="cp">no</td><td class="cp">yes</td><td class="cp">yes</td><td class="cp">yes</td><td class="cp">yes</td></tr>
+        <tr><td class="nm">font-size: 0</td><td class="cp">no</td><td class="cp">yes</td><td class="cp">yes</td><td class="cp">yes</td><td class="cp">yes</td></tr>
+        <tr><td class="nm">clip-path: inset(100%)</td><td class="cp">no</td><td class="cp">yes</td><td class="cp">yes</td><td class="cp">yes</td><td class="cp">yes</td></tr>
+        <tr><td class="nm">text-indent: -9999px</td><td class="cp">no</td><td class="cp">yes</td><td class="cp">yes</td><td class="cp">yes</td><td class="cp">yes</td></tr>
+        <tr><td class="nm">position: absolute, left: -9999px</td><td class="cp">no</td><td class="cp">yes</td><td class="cp">yes</td><td class="cp">yes</td><td class="cp">yes</td></tr>
+        <tr><td class="nm">screen-reader-only clip</td><td class="cp">no</td><td class="cp">yes</td><td class="cp">yes</td><td class="cp">yes</td><td class="cp">yes</td></tr>
+        <tr><td class="nm">under an opaque white box</td><td class="cp">no</td><td class="cp">yes</td><td class="cp">yes</td><td class="cp">yes</td><td class="cp">yes</td></tr>
+        <tr><td class="nm">height: 0 with overflow: hidden</td><td class="cp">no</td><td class="cp"><strong>no</strong></td><td class="cp">yes</td><td class="cp">yes</td><td class="cp">yes</td></tr>
+        <tr><td class="nm">user-select: none</td><td class="cp"><strong>yes</strong></td><td class="cp"><strong>no</strong></td><td class="cp">yes</td><td class="cp">yes</td><td class="cp">yes</td></tr>
+        <tr><td class="nm">aria-hidden="true"</td><td class="cp">yes</td><td class="cp">yes</td><td class="cp">yes</td><td class="cp">yes</td><td class="cp"><strong>no</strong></td></tr>
+        <tr><td class="nm">visibility: hidden</td><td class="cp">no</td><td class="cp">no</td><td class="cp">no</td><td class="cp">yes</td><td class="cp">no</td></tr>
+        <tr><td class="nm">display: none</td><td class="cp">no</td><td class="cp">no</td><td class="cp">no</td><td class="cp">yes</td><td class="cp">no</td></tr>
+        <tr><td class="nm">hidden attribute</td><td class="cp">no</td><td class="cp">no</td><td class="cp">no</td><td class="cp">yes</td><td class="cp">no</td></tr>
+        <tr><td class="nm">HTML comment</td><td class="cp">no</td><td class="cp">no</td><td class="cp">no</td><td class="cp">yes</td><td class="cp">no</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>Read the first ten rows again and the practical consequence is uncomfortable. Every technique
+    that works by making the text <em>look</em> like nothing &mdash; same colour as the background,
+    zero opacity, zero size, clipped, moved off screen, covered up &mdash; leaves the text completely
+    intact for anybody who selects the page and pastes it somewhere plain. That is one action, it
+    takes about two seconds, and it defeats nine of the fourteen methods on the list.</p>
+
+  <p>The three at the bottom are the only ones that genuinely withhold the text from a reader, and
+    they all withhold it from everybody at once: no pixels, no copy, no find, no screen reader. What
+    they cannot do is remove it from the file. Every one of them is still sitting in the markup, one
+    Ctrl+U away.</p>
+
+  <h2>Three methods run backwards</h2>
+
+  <p>The interesting rows are the ones where <em>yes</em> and <em>no</em> land in unexpected places.</p>
+
+  <p><code>user-select: none</code> is the only method in the set that hides text from the clipboard
+    while leaving it plainly visible. The word is on the screen, Ctrl+F finds it, view-source shows
+    it, a screen reader reads it &mdash; and a select-all and copy produces nothing for it. If what
+    you want is for people to read a thing without taking it, this is the tool; it is also the one
+    that quietly breaks the ordinary human act of copying a reference or a code snippet off a page.
+    It is worth knowing that the property is doing something narrower than its name suggests: it
+    changes what can be selected, not what can be seen.</p>
+
+  <p><code>aria-hidden="true"</code> is the mirror image. The text is visible, copyable, findable and
+    in the source, and it is absent from the accessibility tree. It hides text from exactly one
+    reader. That is the correct way to mark something decorative, and it is the wrong way to hide
+    anything from a person who can see the screen &mdash; a mistake that gets made surprisingly
+    often by people who assume the attribute means &ldquo;invisible&rdquo;.</p>
+
+  <p>The screen-reader-only clip pattern is the third one, and it is the case where &ldquo;hidden&rdquo;
+    means the opposite of what you would guess. The text is painted nowhere on screen, and it is
+    fully present to the clipboard, to find-in-page and to a screen reader. This is the accessible
+    technique for labelling a control that has no visible label. It also means that anything you hide
+    this way is, for a machine reading the page, not hidden at all.</p>
+
+  <h2>The one row where the browser disagrees with itself</h2>
+
+  <p><code>height: 0</code> with <code>overflow: hidden</code> deserves its own paragraph, because
+    two reasonable checks give opposite answers on it.</p>
+
+  <p>Measured on a page holding that one hidden word: <code>document.body.innerText</code>
+    <strong>contains</strong> the word. A selection built over the whole body
+    <strong>does not</strong>. Neither does the real clipboard after Ctrl+A and Ctrl+C. And
+    find-in-page <strong>does</strong> find it.</p>
+
+  <p>So: findable but not copyable; present in <code>innerText</code> and absent from
+    <code>Selection.toString()</code>. If you have ever written a check for stray text that reads
+    <code>innerText</code>, this is the case where it reports something the user cannot actually
+    take, and if you have ever written one that copies and compares, this is the case where it
+    misses something the user can locate with Ctrl+F. The two most common heuristics for
+    &ldquo;is there text here&rdquo; disagree on the same element, and neither is wrong about what it
+    measures.</p>
+
+  <h2>What git does with text you cannot see</h2>
+
+  <p>Version control is where hidden text stops being a curiosity. A change consisting of one
+    zero-width space inside a word produces this:</p>
+
+  <p><code>-The invoice total is 480 dollars.<br>+The invoice total is<span class="ent">U+200B</span> 480 dollars.</code></p>
+
+  <p>Two lines that render identically, and a stat of one insertion and one deletion. Reviewers see a
+    line that changed and cannot see what changed about it. <code>git diff --word-diff</code> is the
+    fix, and it is worth knowing why it works: the character turns <code>is</code> and
+    <code>is+U+200B</code> into two different <em>words</em> as far as the diff is concerned, so the
+    invisible edit becomes a visible one:</p>
+
+  <p><code>The invoice total [-is-]{+is<span class="ent">U+200B</span>+} 480 dollars.</code></p>
+
+  <p>The whitespace tooling is where it gets worse, because it behaves as though invisible characters
+    were the kind of noise it is designed to suppress. Measured on three files that differ only by
+    one trailing character:</p>
+
+  <div class="scroll">
+    <table>
+      <thead>
+        <tr><th>Trailing character</th><th><code>git diff --check</code></th><th><code>--ignore-all-space</code></th><th><code>--ignore-space-change</code></th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="nm">normal space U+0020</td><td class="cp">exit 2, &ldquo;trailing whitespace&rdquo;</td><td class="cp">change disappears</td><td class="cp">change disappears</td></tr>
+        <tr><td class="nm">no-break space U+00A0</td><td class="cp">exit 0, silent</td><td class="cp">1 insertion, 1 deletion</td><td class="cp">1 insertion, 1 deletion</td></tr>
+        <tr><td class="nm">zero-width space U+200B</td><td class="cp">exit 0, silent</td><td class="cp">1 insertion, 1 deletion</td><td class="cp">1 insertion, 1 deletion</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>That is the whole problem in three rows. Git catches the trailing space you can see and says
+    nothing about the two you cannot. The flags that exist to stop whitespace changes cluttering a
+    diff suppress a change that is a normal space and leave a change that is a no-break space or a
+    zero-width space fully reported. So the invisible edit is the one edit guaranteed to survive
+    every filter meant to hide trivial ones.</p>
+
+  <p>A line made entirely of forty zero-width spaces is the extreme version. Git reports it as one
+    insertion and zero deletions, prints it as an added line that renders blank, and
+    <code>--ignore-blank-lines</code> does not hide it. In the file it is not blank at all: the
+    document went from 17 bytes to 138, so a line that looks empty in the diff carries 121 bytes.</p>
+
+  <p>Finding them is easy once you stop typing the character and name it instead.
+    <code>git grep -P '\x{200B}'</code> matched the file in this test, and so did
+    <code>git grep -n</code> given the character directly, which is worth remembering because the
+    usual advice is that you cannot search for something you cannot type. You can &mdash; the shell
+    will happily store it from a paste, and matching on the code point is the reliable form.</p>
+
+  <h2>A redaction box is a drawing instruction, not a deletion</h2>
+
+  <p>The most consequential version of this mistake is in documents. A PDF is a list of drawing
+    instructions: put this text here, fill that rectangle there. Painting over text appends an
+    instruction to the end of the list; it does not remove the one that drew the text.</p>
+
+  <p>Measured on a small PDF built for the purpose, holding one line of text and then a filled white
+    rectangle drawn over it: the file was 630 bytes, the rectangle instruction accounted for 28 of
+    them, and the phrase was still present byte-for-byte. An extractor that does nothing but walk the
+    content stream and read the text operands returned the phrase from the &ldquo;redacted&rdquo;
+    file without any trouble.</p>
+
+  <p>Doing it properly means deleting the text operand rather than covering it. That took the file to
+    604 bytes, the extractor returned nothing, and the rectangle stayed exactly where it was. Same
+    appearance, 26 bytes different, one of them recoverable.</p>
+
+  <p>The general rule falls out of that: if hiding the text added bytes to the file, the text is
+    still in the file. Removing it is the only operation that makes it gone, and a smaller file is
+    the sign that it worked.</p>
+
+  <h2>Comments, binaries and the text nobody meant to ship</h2>
+
+  <p>An HTML comment is the standard way to keep notes in a Markdown file that renders on a code
+    host, and it works exactly as advertised: no pixels, no copy, no find-in-page. What it does not
+    do is keep the note private. The comment is in the file, in the source view, in every clone, and
+    in every diff that touches the line next to it. This is the most common way ordinary working
+    notes end up published, and unlike the CSS methods it is not a mistake anybody notices, because
+    nothing on screen ever looked wrong.</p>
+
+  <p>Compiled programs have the same property by construction. Strings that are never printed still
+    sit in the binary, and the standard utility for listing printable sequences in a file will show
+    them. Easter eggs that ship inside every build from a language runtime are the benign end of
+    that; credentials and internal host names are the other end.</p>
+
+  <p>And then there is the case that is not hiding at all. A no-break space at the end of a line, a
+    soft hyphen a word processor inserted, an invisible character that came along in a paste &mdash;
+    these are hidden text in the literal sense, and they are invisible to everybody, including the
+    person who put them there. To find those, the <a href="/hidden-characters">hidden character
+    scanner</a> reports which code point and where, and the
+    <a href="/invisible-characters">invisible character list</a> covers the ones people paste on
+    purpose.</p>
+
+  <h2>How to check a page in ten seconds</h2>
+
+  <p>Select everything and paste it into a plain text editor. That single action recovers nine of the
+    fourteen methods above, including every one that works by making text look like the background.
+    It is the highest-yield check there is, and it needs no tools.</p>
+
+  <p>Whatever survives that, Ctrl+F will not help with &mdash; the four methods that defeat copy also
+    defeat find-in-page. For those, look at the source, which catches all four. For a file on disk
+    rather than a page, <code>cat -A</code> renders anything outside printable ASCII in readable
+    notation, and <code>cmp</code> gives you the byte offset of the first difference when two files
+    look the same and are not.</p>
+
+  <p>If the text is going to a language model rather than a person, the cost is not whether it is
+    visible but whether it is counted: invisible characters are tokenised like any other. See
+    <a href="/token-cost">what hidden characters cost in tokens</a>.</p>
+
+  <h2>What this page does not tell you</h2>
+
+  <p>Whether a search engine indexes hidden text, and what it then does to your ranking. Those are
+    two different questions and the discussion around them has never settled: one side points to
+    experiments showing the text gets indexed, the other points out that indexed and ranked are not
+    the same thing and that a test run on a single small site cannot show a penalty either way. It is
+    not something that can be settled from one machine, so it is not claimed here.</p>
+
+  <p>The table is also specific to one engine. It was measured in Chromium, and the columns that come
+    from the rendering and accessibility layers are the ones most likely to differ elsewhere. The
+    view-source and clipboard columns follow from how the markup is parsed and are more stable.</p>
+
+  <p class="crosslink">Measured 2026-09-28 with Chromium via Playwright and the Chrome DevTools
+    accessibility protocol, Git 2.x on Windows via Git Bash, and hand-built PDF content streams
+    parsed with Python 3.13.12.
+    Related: <a href="/hidden-characters">find hidden characters in a file</a>,
+    <a href="/invisible-characters">the full list of invisible characters</a>,
+    <a href="/invisible-text">what a browser does with characters you cannot see</a>,
+    <a href="/invisible-character">what one does to a form field</a>,
+    <a href="/empty-character">why there is no empty character</a>,
+    <a href="/zero-width-space">the zero-width space remover</a>, and
+    <a href="/tag-characters">tag characters that hide a whole ASCII message</a>.</p>
+
+  <footer class="foot">
+    <a href="/about">About</a> &middot; <a href="/privacy">Privacy</a> &middot; <a href="/contact">Contact</a> &middot; <a href="https://github.com/f6946672/stripinvisible/blob/main/hidden-text.html">Source</a>
+  </footer>
+</main>
+<script src="/hidden-text.js"></script>
+<!-- Cloudflare Web Analytics -->
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token":"20874485db814b21a0a76d82d7f9b4de"}'></script>
+</body>
+</html>
