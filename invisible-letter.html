@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Invisible Letter: The Four That Are Letters and Print Nothing</title>
+<meta name="description" content="Unicode has exactly four characters that are letters and render as nothing: U+3164, U+1160, U+115F and U+FFA0. Measured: which letters-only rules let them through, why Python and JavaScript disagree about them, and why the tag characters that are named like letters are not letters at all.">
+<link rel="canonical" href="https://stripinvisible.com/invisible-letter">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://stripinvisible.com/invisible-letter">
+<meta property="og:title" content="Invisible Letter: The Four That Are Letters and Print Nothing">
+<meta property="og:description" content="Four code points are letters and paint nothing. Measured in Chromium: they pass every letters-only pattern, they survive trim, and Python calls them word characters while JavaScript does not.">
+<meta name="twitter:card" content="summary">
+<meta property="og:image" content="https://stripinvisible.com/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:image" content="https://stripinvisible.com/og-image.png">
+
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/styles.css">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebPage",
+      "name": "Invisible Letter: The Four That Are Letters and Print Nothing",
+      "url": "https://stripinvisible.com/invisible-letter",
+      "description": "The four Unicode characters that belong to the Letter category and render as nothing, measured against letters-only validation in Chromium, Python and Node."
+    },
+    {
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "Strip Invisible", "item": "https://stripinvisible.com/" },
+        { "@type": "ListItem", "position": 2, "name": "Invisible Letter" }
+      ]
+    },
+    {
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "Is there really an invisible letter I can copy?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Four of them. Of the twelve code points Unicode names as fillers, U+3164 HANGUL FILLER, U+1160 HANGUL JUNGSEONG FILLER, U+115F HANGUL CHOSEONG FILLER and U+FFA0 HALFWIDTH HANGUL FILLER are the only four in the Letter category, and all four paint nothing while reserving a full character cell. Every other filler is punctuation or a combining mark. The zero-width space U+200B is invisible too, but it is a format character, not a letter, and it fails every letters-only check." }
+        },
+        {
+          "@type": "Question",
+          "name": "Why does my blank name get rejected on one site and accepted on another?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Because the two sites are running opposite tests. Measured in Chromium, a field with pattern \\p{L}+ accepts all four invisible letters and rejects the zero-width space, while a field with pattern [A-Za-z]+ rejects all of them along with every non-English name. A site that only checks whether the string is empty accepts anything, invisible letter or not." }
+        },
+        {
+          "@type": "Question",
+          "name": "Does \\p{L} match invisible characters?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Yes, for the four Hangul fillers and only for those. Measured in Node with Unicode 17.0, /^\\p{L}+$/u is true for U+3164, U+1160, U+115F and U+FFA0, and false for U+200B, U+00A0, U+FEFF and the tag characters. Python agrees from the other direction: str.isalpha, str.isalnum, str.isprintable and str.isidentifier all return True for those four and False for the rest." }
+        },
+        {
+          "@type": "Question",
+          "name": "Why does Python call a blank name a word character and JavaScript not?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Because \\w means two different things. Python's \\w is Unicode-aware and matches any letter, so re.fullmatch('\\w+', U+3164) succeeds. JavaScript's \\w without the u flag is exactly A-Za-z0-9_ and matches none of them. The same rule written in two languages gives opposite answers on the same string." }
+        },
+        {
+          "@type": "Question",
+          "name": "Do two people with blank names collide?",
+          "acceptedAnswer": { "@type": "Answer", "text": "No. Measured in Node, five strings that all look blank — a space, a no-break space, U+1160, U+200B and U+3164 — are five distinct entries in a Set and sort in that order. A uniqueness check will not stop two people from both having a name that looks empty, because they are not the same bytes." }
+        },
+        {
+          "@type": "Question",
+          "name": "Does normalizing the string get rid of the invisible letter?",
+          "acceptedAnswer": { "@type": "Answer", "text": "No, it swaps it. NFKC rewrites U+3164 into U+1160 and U+FFA0 into U+1160. Both are still letters, still invisible and still accepted by \\p{L}, so a pipeline that normalizes first and then applies a letters-only rule accepts the name either way." }
+        }
+      ]
+    }
+  ]
+}
+</script>
+</head>
+<body>
+<main>
+
+  <nav class="crumbs" aria-label="Breadcrumb">
+    <a href="/">Strip Invisible</a> &rsaquo; <span>Invisible Letter</span>
+  </nav>
+
+  <h1>Invisible letter: four of them are real letters, and every letters-only rule waves them through</h1>
+
+  <p class="lede"><strong>Short answer:</strong> of the twelve code points Unicode names as fillers,
+    exactly four are letters &mdash; <strong>U+3164 HANGUL FILLER, U+1160 HANGUL JUNGSEONG FILLER,
+    U+115F HANGUL CHOSEONG FILLER and U+FFA0 HALFWIDTH HANGUL FILLER</strong>. They print nothing and
+    they are not whitespace, which is the combination that makes them useful: <code>\p{L}</code>
+    accepts them, <code>isalpha()</code> accepts them, and no trim will delete them. The zero-width
+    space you were handed instead is none of those things &mdash; it is a format character, it fails
+    every letters-only test, and it measures 0.00 px where a filler reserves a whole character cell.</p>
+
+  <div class="tool">
+    <div class="pane">
+      <label>The four invisible letters</label>
+      <button class="grabbtn primary" type="button" data-cp="12644" data-label="U+3164 HANGUL FILLER">Copy U+3164 <span class="grabcp">16 px wide</span></button>
+      <button class="grabbtn" type="button" data-cp="4448" data-label="U+1160 HANGUL JUNGSEONG FILLER">Copy U+1160 <span class="grabcp">16 px wide</span></button>
+      <button class="grabbtn" type="button" data-cp="4447" data-label="U+115F HANGUL CHOSEONG FILLER">Copy U+115F <span class="grabcp">16 px wide</span></button>
+      <button class="grabbtn" type="button" data-cp="65440" data-label="U+FFA0 HALFWIDTH HANGUL FILLER">Copy U+FFA0 <span class="grabcp">8 px wide</span></button>
+      <p class="row meta">Not a letter, for contrast:
+        <button class="grabbtn" type="button" data-cp="8203" data-label="U+200B zero width space">Copy U+200B <span class="grabcp">0 px wide</span></button>
+      </p>
+    </div>
+    <div class="pane">
+      <label>What you just copied</label>
+      <p>One character, three bytes as UTF-8, no ink on screen. U+3164, U+1160 and U+115F each advance
+        the cursor by 16 px in a 16 px font; U+FFA0 advances it by 8 px, so it is the one to use where
+        a blank name is pushing a layout around. All four pass <code>^\p{L}+$</code>. None of them is
+        removed by <code>trim()</code>.</p>
+      <p class="row meta">Everything below was measured, not looked up: Chromium via Playwright for
+        the rendering and form columns, Python 3.13.14 (Unicode 15.1.0) and Node 22.22.2 (Unicode 17.0)
+        for the category and regex columns.</p>
+    </div>
+  </div>
+
+  <h2>The four, measured</h2>
+
+  <p>Twelve Unicode characters carry the word FILLER in their name. Four are letters, seven are
+    punctuation and one is a combining mark. Only the four letters behave like a character you typed:
+    they occupy a cell, they survive a trim, and they answer true to every &ldquo;is this a
+    letter&rdquo; question anyone thinks to ask.</p>
+
+  <div class="scroll">
+    <table>
+      <thead>
+        <tr><th>Code&nbsp;point</th><th>Name</th><th>Cat.</th><th>Width&nbsp;/&nbsp;char</th><th>Ink&nbsp;painted</th><th>Bytes</th><th>NFKC</th><th>JS&nbsp;variable&nbsp;name</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="nm">U+3164</td><td>HANGUL FILLER</td><td class="cp">Lo</td><td class="cp">16.00 px</td><td class="cp">0 px</td><td class="cp">3</td><td class="cp">U+1160</td><td class="cp">legal</td></tr>
+        <tr><td class="nm">U+1160</td><td>HANGUL JUNGSEONG FILLER</td><td class="cp">Lo</td><td class="cp">16.00 px</td><td class="cp">0 px</td><td class="cp">3</td><td class="cp">unchanged</td><td class="cp">legal</td></tr>
+        <tr><td class="nm">U+115F</td><td>HANGUL CHOSEONG FILLER</td><td class="cp">Lo</td><td class="cp">16.00 px</td><td class="cp">0 px</td><td class="cp">3</td><td class="cp">unchanged</td><td class="cp">legal</td></tr>
+        <tr><td class="nm">U+FFA0</td><td>HALFWIDTH HANGUL FILLER</td><td class="cp">Lo</td><td class="cp">8.00 px</td><td class="cp">0 px</td><td class="cp">3</td><td class="cp">U+1160</td><td class="cp">legal</td></tr>
+        <tr><td class="nm">U+200B</td><td>ZERO WIDTH SPACE</td><td class="cp">Cf</td><td class="cp">0.00 px</td><td class="cp">0 px</td><td class="cp">3</td><td class="cp">unchanged</td><td class="cp">syntax error</td></tr>
+        <tr><td class="nm">U+E0054</td><td>TAG LATIN CAPITAL LETTER T</td><td class="cp">Cf</td><td class="cp">0.00 px</td><td class="cp">0 px</td><td class="cp">4</td><td class="cp">unchanged</td><td class="cp">syntax error</td></tr>
+        <tr><td class="nm">U+FFFC</td><td>OBJECT REPLACEMENT CHARACTER</td><td class="cp">So</td><td class="cp">16.00 px</td><td class="cp">1070 px</td><td class="cp">3</td><td class="cp">unchanged</td><td class="cp">syntax error</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>The ink column is the one nobody publishes. It is a pixel count of the rendered glyph against a
+    blank region of the same size: ten copies of U+3164 in a 16 px font measured 160 px wide and
+    painted <strong>zero non-white pixels</strong>. The character reserves a full cell and puts
+    nothing in it. That is the whole trick, and it is also the tell &mdash; anything with a
+    background, a border or an underline behind a blank name will show a 16 px gap where the eye
+    expects none.</p>
+
+  <p>U+FFFC is in the table because it is the usual next guess and it fails. It is the character
+    meant to stand in for a missing object, it is printable, and in Chromium it paints a visible box:
+    1070 non-white pixels for ten copies, against 0 for the fillers and 492 for a Cyrillic
+    <span lang="ru">а</span>. Counting painted pixels is the only test that separates the four real
+    invisible letters from an ordinary glyph your font happens to lack.</p>
+
+  <h2>The letters-only rule is the hole, not the fix</h2>
+
+  <p>The advice given whenever somebody asks how to accept names in any alphabet is to match
+    <code>\p{L}</code>. It is in the accepted answers, it is the obvious reading of &ldquo;any
+    letter&rdquo;, and it lets all four of these in. Measured in Chromium with a real form, a field
+    carrying <code>pattern="\p{L}+"</code> validates a value of U+3164, U+1160, U+115F or U+FFA0, and
+    rejects U+200B, U+00A0, U+FEFF and the tag characters. A field carrying
+    <code>pattern="[A-Za-z]+"</code> rejects everything invisible &mdash; and every name that is not
+    written in the Latin alphabet with it.</p>
+
+  <p>That is the fork, and there is no clever third option in the middle of it. Either your rule
+    accepts exactly the characters somebody can type on a US keyboard, or it admits every character
+    Unicode files under Letter, including four that nobody can see. The rules that look like a
+    compromise are not: <code>[\p{L}\p{M}]</code> accepts the four as well, because the marks were
+    never the problem.</p>
+
+  <h2>One rule, two languages, opposite answers</h2>
+
+  <p>Write the same check in Python and in JavaScript and you get different verdicts on the same
+    string, because the two languages do not mean the same thing by the same pattern.</p>
+
+  <div class="scroll">
+    <table>
+      <thead>
+        <tr><th>Rule</th><th>U+3164</th><th>U+1160</th><th>U+115F</th><th>U+FFA0</th><th>U+200B</th><th>U+E0054</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="nm">Python <code>re.fullmatch(r"\w+")</code></td><td class="cp">pass</td><td class="cp">pass</td><td class="cp">pass</td><td class="cp">pass</td><td class="cp">fail</td><td class="cp">fail</td></tr>
+        <tr><td class="nm">JavaScript <code>/^\w+$/</code></td><td class="cp">fail</td><td class="cp">fail</td><td class="cp">fail</td><td class="cp">fail</td><td class="cp">fail</td><td class="cp">fail</td></tr>
+        <tr><td class="nm">Python <code>s.isalpha()</code></td><td class="cp">pass</td><td class="cp">pass</td><td class="cp">pass</td><td class="cp">pass</td><td class="cp">fail</td><td class="cp">fail</td></tr>
+        <tr><td class="nm">JavaScript <code>/^\p{L}+$/u</code></td><td class="cp">pass</td><td class="cp">pass</td><td class="cp">pass</td><td class="cp">pass</td><td class="cp">fail</td><td class="cp">fail</td></tr>
+        <tr><td class="nm">Python <code>s.isprintable()</code></td><td class="cp">pass</td><td class="cp">pass</td><td class="cp">pass</td><td class="cp">pass</td><td class="cp">fail</td><td class="cp">fail</td></tr>
+        <tr><td class="nm">Python <code>s.isidentifier()</code></td><td class="cp">pass</td><td class="cp">pass</td><td class="cp">pass</td><td class="cp">pass</td><td class="cp">fail</td><td class="cp">fail</td></tr>
+        <tr><td class="nm">either language <code>[A-Za-z0-9_]+</code></td><td class="cp">fail</td><td class="cp">fail</td><td class="cp">fail</td><td class="cp">fail</td><td class="cp">fail</td><td class="cp">fail</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>Python&rsquo;s <code>\w</code> is Unicode-aware and matches any letter, so a blank name is a
+    word. JavaScript&rsquo;s <code>\w</code> is <code>[A-Za-z0-9_]</code> and nothing else, so the
+    same blank name is not. Both are documented, both are correct, and a stack that validates in the
+    browser with <code>\w</code> and again on the server with <code>\w</code> will reject the name in
+    one place and accept it in the other.</p>
+
+  <p>The identifier row is the sharpest version of the same thing. All four fillers are legal
+    JavaScript variable names on their own &mdash; <code>var</code> followed by U+3164 parses. It has
+    been called a bug in the identifier rules and it has been defended as the price of letting people
+    write code in their own script. Either way it is the property being relied on here: the character
+    is a letter to the language, not to the reader.</p>
+
+  <h2>The characters named like letters are not letters</h2>
+
+  <p>The tag block, U+E0020 to U+E007F, is where the naming goes the other way. Its characters are
+    called TAG LATIN CAPITAL LETTER T, TAG LATIN SMALL LETTER A and so on down the ASCII range, and
+    they are not letters. Their category is Cf. <code>\p{L}</code> does not match them. They cannot
+    start or continue a variable name. They cost four bytes and two UTF-16 code units each, against
+    three bytes and one unit for a filler, and they do something no filler does: they attach to the
+    character in front of them.</p>
+
+  <p>Measured with the grapheme segmenter in Chromium, the string <code>a</code> + U+E0054 +
+    <code>b</code> breaks into two clusters, not three &mdash; the tag character is part of the
+    <code>a</code>. The same test on U+3164 gives three. So a single backspace after a visible letter
+    with a tag character behind it takes the letter with it, and a counter that reports
+    &ldquo;characters&rdquo; by counting clusters reports one fewer than a counter that counts code
+    points. The fillers are ordinary standalone characters; the tag characters are passengers.</p>
+
+  <p>That difference also decides what your cleanup finds. The popular one-liner that strips
+    <code>[\u200B-\u200D\uFEFF]</code> catches the zero-width space and the byte-order mark and
+    misses all four invisible letters, because letters are not in its range. <code>\p{C}</code> and
+    <code>\p{Cf}</code> catch the tag characters and the zero-width family and miss all four
+    invisible letters, for the same reason in reverse. Only a sweep for anything outside printable
+    ASCII catches all of them, and that sweep is also the one that throws away every accented
+    character in the string.</p>
+
+  <h2>Two blank names are never the same name</h2>
+
+  <p>Five strings that all look empty &mdash; a space, a no-break space, U+1160, U+200B and
+    U+3164 &mdash; are five separate entries in a Set and sort in exactly that order. A uniqueness
+    constraint on a username column will therefore not stop two accounts from both looking nameless,
+    and a list sorted by name will order them by code point while showing five identical gaps.
+    Percent-encoded, they are not even the same length: the fillers are nine characters
+    (<code>%E3%85%A4</code> for U+3164), a tag letter is twelve, and the no-break space is two.</p>
+
+  <p>Normalizing does not rescue any of it. NFKC turns U+3164 into U+1160 and U+FFA0 into U+1160;
+    both results are still letters, still invisible, and still accepted by <code>^\p{L}+$</code>. A
+    pipeline that normalizes first and then runs a letters-only rule accepts the name at both ends,
+    and the only thing it changed is which of the four the user ended up with.</p>
+
+  <h2>Which one to copy</h2>
+
+  <p>Take U+3164 if you want the one that most blank-name generators already hand out, and know that
+    it will reserve 16 px per copy and will become U+1160 if anything normalizes your input. Take
+    U+FFA0 if the blank name has to sit inside a tight layout, at 8 px per copy, with the same
+    normalization caveat. Take U+1160 or U+115F if you want the value to come out of a normalizing
+    pipeline unchanged. Take U+200B only if the thing you need is genuinely zero width &mdash; it
+    measures 0.00 px, and it will fail any check that asks for letters.</p>
+
+  <p>If the reason you are reading this is the opposite problem &mdash; a name, a username or a
+    spreadsheet column that came back with something invisible in it &mdash; the fix is not a
+    letters-only rule. It is a decision about which characters you are willing to accept, written
+    down as an allow list rather than a cleanup pattern, because every cleanup pattern here missed
+    four of the seven characters in the table above.</p>
+
+  <h2>What this page does not tell you</h2>
+
+  <p>Whether any particular platform accepts these. What is measured here is the rules &mdash; the
+    HTML constraint API in Chromium, the Unicode category, and the behaviour of two regex engines.
+    Individual services layer their own checks on top, and several reject blank names outright for
+    reasons that have nothing to do with Unicode.</p>
+
+  <p>The rendering columns are also specific to one engine on one machine with one font stack. The
+    fillers painted nothing here and U+FFFC painted a box, and a font that lacks a filler entirely
+    could draw one too. Categories, byte counts and the regex verdicts will hold anywhere; the pixel
+    counts are a measurement of this browser, not a promise about yours.</p>
+
+  <p class="crosslink">Measured 2026-09-29 with Chromium via Playwright, Python 3.13.14
+    (unicodedata 15.1.0) and Node 22.22.2 (ICU, Unicode 17.0).
+    Related: <a href="/invisible-characters">the full list of invisible characters</a>,
+    <a href="/empty-character">why there is no empty character</a>,
+    <a href="/hidden-characters">how to find hidden characters in a file</a>,
+    <a href="/invisible-character">what one does to a form field</a>,
+    <a href="/tag-characters">tag characters that hide a whole ASCII message</a>,
+    <a href="/invisible-text">what a browser does with characters you cannot see</a>,
+    <a href="/zero-width-space">the zero-width space remover</a>, and
+    <a href="/hidden-text">who can still read text after you hide it</a>.</p>
+
+  <footer class="foot">
+    <a href="/about">About</a> &middot; <a href="/privacy">Privacy</a> &middot; <a href="/contact">Contact</a> &middot; <a href="https://github.com/f6946672/stripinvisible/blob/main/invisible-letter.html">Source</a>
+  </footer>
+</main>
+<script src="/list.js"></script>
+<!-- Cloudflare Web Analytics -->
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token":"20874485db814b21a0a76d82d7f9b4de"}'></script>
+</body>
+</html>
