@@ -1,0 +1,46 @@
+# Strip Invisible
+
+> Free browser-based tools and measured reference pages about invisible Unicode characters — zero-width space, word joiner, BOM, soft hyphen, tag characters and Hangul fillers.
+
+Strip Invisible is a free utility site about invisible Unicode characters: how to find and remove them, what each one does, and what they break. Every tool runs entirely in the browser — text you paste is never uploaded, there is no account system and no cookies.
+
+## What makes this site worth citing
+
+- Every number on the site is measured, and the page names the instrument: Chromium 153, Node 22, Python 3.13, Unicode 15.1. A claim without a measurement is not published.
+- Counts are exact rather than general. Unicode 15.1 defines 170 format characters (category Cf), and 128 of them render at exactly 0.00 px in Chromium 153.
+- Pages are written to overturn a common belief where the measurement does, for example that `CLEAN()` in Excel removes zero-width characters (it does not), or that the four Hangul filler characters behave like other invisible characters (they render at 16.00 px, not 0).
+- Characters are identified by code point — U+200B, U+2060, U+FEFF, U+E0020–U+E007F — so a claim can be checked against the Unicode standard.
+- Character data is offered as a copyable tool, not only as prose: the main list page has a Copy button beside each character.
+
+## Removers and checkers
+
+- [Claude Watermark Remover](https://stripinvisible.com/): Paste Claude output and strip invisible Unicode watermarks — zero-width characters, tag characters, private-use marks and hidden formatting. Free, no sign-up, runs in the browser.
+- [Zero-Width Space Remover](https://stripinvisible.com/zero-width-space): Paste text and find every invisible Unicode character — zero-width space U+200B, word joiner U+2060, BOM U+FEFF, soft hyphen U+00AD, tag characters — see where each one sits, then delete them.
+- [Invisible Unicode Characters — the complete list](https://stripinvisible.com/invisible-characters): Copy an invisible character in one click, or read what each one does and whether it is safe to delete: U+200B, U+00A0, U+2060, U+FEFF, U+00AD, tag characters, variation selectors and private use marks.
+- [Compare Two Texts and Find Invisible Differences](https://stripinvisible.com/compare-text): Paste two strings that look identical and get the exact character positions where they differ, the code point at each difference, and whether the mismatch is only invisible characters.
+- [Hidden Characters: find them in text, then in a file](https://stripinvisible.com/hidden-characters): Paste text and get every hidden character by code point, line and byte, plus what `cat -A`, `od`, `xxd`, `wc`, `grep` and `cmp` actually print for U+200B, U+00A0, U+FEFF and U+200D on a real shell.
+- [Remove invisible characters in Excel](https://stripinvisible.com/clean-excel): Why `CLEAN()` and `TRIM()` do not remove zero-width spaces, word joiners or BOMs — with a working `SUBSTITUTE` + `UNICHAR` formula.
+- [Remove invisible characters from JSON](https://stripinvisible.com/clean-json): Strip invisible Unicode from JSON that will not parse or will not match, then validate the result.
+- [Remove invisible characters from Word and Google Docs](https://stripinvisible.com/clean-word): Strip invisible Unicode from pasted document text without losing a word, showing word and character counts before and after.
+
+## Measured reference pages
+
+- [Invisible character](https://stripinvisible.com/invisible-character): An invisible character is a Unicode format character (category Cf). Unicode 15.1 defines 170 of them; measured in Chromium 153, 128 render at exactly 0.00 px. Browsers reject every one in an email field, but a field holding only one still counts as filled.
+- [Invisible letter](https://stripinvisible.com/invisible-letter): Unicode has exactly four characters that are letters and render as nothing — U+3164, U+1160, U+115F and U+FFA0. Which letters-only rules let them through, why Python and JavaScript disagree about them, and why the tag characters named like letters are not letters.
+- [Invisible text](https://stripinvisible.com/invisible-text): Invisible text comes in two families that behave in opposite ways. Measured in Chromium 153, Unicode format characters are 0.00 px wide and Ctrl+F cannot find them, while the Hangul fillers most blank-text pages hand out paint nothing but measure 16.00 px each.
+- [Empty character](https://stripinvisible.com/empty-character): There is no empty character in Unicode. Measured across twenty candidates: ten come off under both JavaScript `trim()` and Python `strip()`, U+FEFF comes off only in JavaScript, nine survive both, and NFKC turns six of them into an ordinary space.
+- [Hidden text](https://stripinvisible.com/hidden-text): Nine of the fourteen ways to make text invisible still hand it to the clipboard on select-all and copy, measured in Chromium — plus what `git diff`, `git grep` and a PDF redaction box actually do with text you cannot see.
+- [Unicode tag characters (U+E0000–U+E007F)](https://stripinvisible.com/tag-characters): U+E0020–U+E007F are 95 invisible characters that spell the whole printable ASCII range. A 20-character hidden message renders 0 px wide, survives NFC/NFKC, survives every zero-width cleaner, and costs 81 tokens instead of 6.
+- [Zero-width joiner (U+200D)](https://stripinvisible.com/zero-width-joiner): U+200D is the invisible character that glues emoji into one picture. The four-person family emoji is 7 code points but 11 billed units, 10,000 joiners in a row count as one character, and one stray joiner flips a 100-character SMS from GSM-7 to UCS-2 and from one segment to two.
+- [U+2028 and U+2029 in JSON and JavaScript](https://stripinvisible.com/line-separators): Measured on Node 22, Chromium and Python 3.13: `JSON.parse` handles U+2028 and U+2029 fine. What differs is the serializers, and inside JavaScript source these two still count as line terminators.
+- [What invisible characters cost you in LLM tokens](https://stripinvisible.com/token-cost): Each zero-width character in a prompt costs about one extra token. A 1,000-word paste with one after every word goes from 1,103 to 2,103 tokens.
+
+## About the site
+
+- [About](https://stripinvisible.com/about): What Strip Invisible is, why it exists, how the tools run, and how the site pays for itself.
+- [Contact](https://stripinvisible.com/contact): One email address, no form, no backend.
+- [Privacy](https://stripinvisible.com/privacy): Everything runs in the browser; pasted text is never uploaded. What the host and the analytics do see, in plain terms.
+
+## Contact
+
+- Site: https://stripinvisible.com/
