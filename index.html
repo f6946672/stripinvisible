@@ -113,7 +113,11 @@
     Need an <a href="/invisible-letter">invisible letter</a> rather than an invisible character?
     Unicode names twelve characters FILLER and exactly four of them are letters &mdash; U+3164,
     U+1160, U+115F and U+FFA0. Measured: all four paint zero pixels while reserving a full
-    character cell, all four pass a letters-only check, and no trim will remove them.</p>
+    character cell, all four pass a letters-only check, and no trim will remove them.
+    Two strings that look the same but will not match a key? The
+    <a href="/compare-text">text comparison</a> prints the codepoint at every position where they
+    differ, up to fifty of them, and can strip the invisible characters and compare again to tell
+    you whether that was the whole difference &mdash; nothing leaves the browser tab.</p>
 
   <section class="tool">
 
