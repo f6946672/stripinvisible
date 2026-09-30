@@ -89,6 +89,11 @@
     &mdash; wider than a capital A at 11.27 px. Both kinds survive copy and paste completely, and
     both are handed to the accessibility layer unchanged.</p>
 
+  <p>If the search was <strong>blank text copy and paste</strong>, that distinction is the one that
+    decides how it lands: a format character pastes as nothing and leaves the line exactly as it
+    was, while a Hangul filler pastes as nothing and still takes a full character of width, so the
+    text around it moves.</p>
+
   <h2>The two families, side by side</h2>
   <p>Everything below was measured in Chromium 153 on Windows. Widths come from rendering
     <code>|X|</code> and subtracting the width of <code>||</code>, at 16px system-ui. The category

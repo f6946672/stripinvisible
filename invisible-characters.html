@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Invisible Unicode Characters — The Complete List</title>
-<meta name="description" content="Copy an invisible character in one click, or read the full list: zero width space U+200B, no-break space U+00A0, word joiner U+2060, BOM U+FEFF, soft hyphen U+00AD, tag characters, variation selectors and private use marks. What each one does, and whether it is safe to delete. Plus what an invisible username does: which characters survive trim, normalisation and a uniqueness check.">
+<meta name="description" content="Copy an invisible character in one click, or read the full list: zero width space U+200B, no-break space U+00A0, word joiner U+2060, BOM U+FEFF, soft hyphen U+00AD, tag characters, variation selectors and private use marks. What each one does, and whether it is safe to delete. Plus what happens to each one when a form trims it, normalises it or counts its length.">
 <link rel="canonical" href="https://stripinvisible.com/invisible-characters">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://stripinvisible.com/invisible-characters">
@@ -74,14 +74,16 @@
   <p>Every character below is listed with what it actually does and whether deleting it is safe.
     The copy button puts the character itself on your clipboard, which is handy when you need one
     to test with. Everything on this page is standard invisible Unicode &mdash; no font trick, no
-    image, nothing to install. If what you want is a blank name or an
-    <a href="#username">invisible username</a>, go straight to that section: a username has to be
-    unique, which makes it a different problem from a display name.</p>
+    image, nothing to install. If what you want is a blank name rather than a character to test
+    with, the sections further down cover that.</p>
 
   <h2>What you just copied</h2>
   <p>If you searched for <strong>invisible character copy and paste</strong>, the button at the top
     is the whole answer: U+200B has no width, prints nothing, and survives the trip through the
     clipboard into almost any input box. It is one codepoint, not a trick.</p>
+  <p>Dropping the last two words changes nothing. An <strong>invisible character copy</strong> is
+    the same button and the same codepoint, and it pastes the same way &mdash; the two searches
+    differ only in what you plan to do with it afterwards.</p>
   <p>The same codepoint is what most people mean by <strong>invisible text copy</strong>: a string
     built out of characters that render as nothing. A field holding only those is empty to look at
     and not empty to the software reading it, which is why some forms accept it and others hand it
@@ -102,6 +104,22 @@
     and cannot see, and some of those carry meaning. The joiner at U+200D is what holds an emoji
     family together as one picture; deleting it changes what people see. Copying from the table
     here means you know exactly which codepoint you ended up with.</p>
+
+  <h2>Blank Unicode, and the symbol that does not exist</h2>
+  <p>A <strong>blank unicode</strong> character is not a separate category in the standard &mdash;
+    it is an ordinary codepoint whose glyph draws nothing, which is why that search and the one for
+    an invisible character keep landing on the same handful of characters.</p>
+  <p>What people picture when they type <strong>blank symbol</strong> is a punctuation mark that
+    paints nothing. There is no such mark: every block that holds symbols has a glyph for each one,
+    so the request falls back to the characters in the tables below.</p>
+
+  <h2>Invisible symbols, and copying one</h2>
+  <p>An <strong>invisible symbol</strong> is the same set of codepoints under a third name, and what
+    is usually wanted from that phrase is a mark that holds a position in a line rather than
+    collapsing out of it.</p>
+  <p>For <strong>invisible symbol copy and paste</strong> the buttons in the tables are the whole
+    procedure: press Copy, paste it where it belongs, and check the width afterwards, because the
+    marks that take no room and the ones that take a full slot sit in the same list.</p>
 
       <h2>Always invisible, always safe to delete</h2>
       <p>These carry no meaning in finished text. Every one of them is removed by default, in both tools on this site.</p>
@@ -346,42 +364,6 @@
     takes up room instead of collapsing to nothing. That difference is also why it behaves
     differently in fields that measure width.</p>
 
-  <h2 id="username">For an invisible username</h2>
-  <p>An <strong>invisible username</strong> faces one test a display name never does: it has to be
-    unique, and something on the platform's side decides what counts as already taken. That turns a
-    cosmetic trick into a question about what happens to your string before it is compared.</p>
-  <p>Normalisation is where most of the surprise lives. All 23 are distinct under NFC and under NFD.
-    Under NFKC there are 18. Four of them &mdash; U+00A0, U+202F, U+205F and U+3000 &mdash; are
-    rewritten as an ordinary space, and U+1160, U+3164 and U+FFA0 all become U+1160. A uniqueness
-    check that runs after NFKC is therefore working from a shorter list of blank names than the one
-    you picked from, and names you would have sworn were different are one name to it.</p>
-  <p>The order of the two steps does not rescue them, which is the part that feels wrong.
-    Normalising first and trimming second empties exactly the same seven codepoints as trimming
-    first and normalising second: U+00A0, U+2028, U+2029, U+202F, U+205F, U+3000 and U+FEFF. Swapping
-    the order changes nothing about which blank usernames survive.</p>
-  <p>Putting one after a real name produces a string that no exact comparison calls equal.
-    <code>admin</code> and <code>admin</code> followed by a zero width space fail <code>===</code>,
-    pass <code>startsWith</code>, pass <code>includes</code>, and are reported as equal by
-    <code>localeCompare</code>. A blocklist built on substring matching catches the imitation; a
-    check built on exact matching lets it through. The hangul fillers and the two wide spaces go the
-    other way &mdash; U+3164, U+FFA0, U+00A0 and U+3000 are reported by <code>localeCompare</code>
-    as different from <code>admin</code>, even though nothing on screen differs. Seven of the 23 do
-    collapse back onto the original name once NFKC and a trim are applied.</p>
-  <p>Then there is the profile URL, which is where a blank name stops being blank. A trailing
-    ordinary space in a path is stripped out by the URL parser. Every invisible character is kept
-    and written out in percent escapes instead: <code>%C2%A0</code> for U+00A0,
-    <code>%E2%80%8B</code> for U+200B, <code>%F3%A0%80%A0</code> for a tag character. Six to twelve
-    visible characters in the address bar, for a name that renders as nothing at all.</p>
-  <p>On the form itself, the character class does most of the rejecting. <code>[A-Za-z0-9_]+</code>
-    &mdash; the pattern most username fields actually use &mdash; refuses all twelve put through a
-    browser, and <code>\w+</code> refuses them too, because in JavaScript <code>\w</code> is ASCII.
-    Loosen it to <code>\S+</code> and nine get through; the three that still fail are U+00A0, U+3000
-    and U+FEFF, the ones JavaScript counts as whitespace. A <code>required</code> field accepts all
-    twelve, including the ones whose <code>trim()</code> length is zero, so the browser reports the
-    field as filled while its own trim reports it as empty. And a minimum length of three is met by
-    two tag characters, because the limit counts UTF-16 units rather than characters: two U+E0020
-    are four units and pass, two U+200B are two units and fail.</p>
-
   <h2>Why they end up in ordinary text</h2>
   <p>Three sources cover almost all of it. Rich text editors insert zero width spaces and
     no-break spaces as you type, and they come along when you copy. AI chat output carries
@@ -423,10 +405,6 @@
     marks each one in place before anything is deleted.</p>
 
   <h2>A note on the other side of this</h2>
-  <p>Used as an <strong>invisible username</strong> they raise a different question, because a
-    username is checked for uniqueness before it is accepted: seven of the 23 survive a trim in
-    JavaScript, six survive one in Python, and only 18 of the 23 are still distinct after NFKC.
-    That is covered above.</p>
   <p>The same characters are also used to hide text in a URL, to smuggle words past a filter, and
     to fingerprint text so its origin can be traced later. That is worth knowing, because it
     explains why some of them show up in places they were never typed. This page exists to help
