@@ -147,6 +147,66 @@
     </ul>
     <p>Paste the text above and this page marks each one where it sits, then removes it.</p>
 
+    <h2>Which removal recipe actually removes it</h2>
+
+    <p>Line up the fifteen invisible characters a piece of text is most likely to be carrying and run the
+      usual cleanup snippets over them one at a time: they do not remove the same set. The most widely
+      copied JavaScript recipe for this job takes four of the fifteen, and two of those four are the
+      characters holding Persian words and emoji families together.</p>
+
+    <div class="scroll">
+      <table>
+        <thead>
+          <tr><th>Recipe</th><th>What it also removes</th><th>Removed,&nbsp;of&nbsp;15</th></tr>
+        </thead>
+        <tbody>
+          <tr><td class="nm"><code>replace(/[\u200B-\u200D\uFEFF]/g, "")</code></td><td class="nm">U+200C and U+200D &mdash; the non-joiner inside Persian and Devanagari words, and the joiner holding an emoji family together</td><td class="cp">4</td></tr>
+          <tr><td class="nm"><code>replace(/\u200B/g, "")</code></td><td class="nm">nothing else</td><td class="cp">1</td></tr>
+          <tr><td class="nm"><code>replace(/\p{Cf}/gu, "")</code></td><td class="nm">U+200E and U+200F, and the soft hyphen inside words that are meant to hyphenate</td><td class="cp">9</td></tr>
+          <tr><td class="nm"><code>replace(/\p{C}/gu, "")</code></td><td class="nm">the same nine &mdash; a wider property, no wider result</td><td class="cp">9</td></tr>
+          <tr><td class="nm">JavaScript <code>trim()</code></td><td class="nm">nothing, and only at the two ends: U+FEFF, U+00A0, U+2028, U+2029, U+202F</td><td class="cp">5</td></tr>
+          <tr><td class="nm">Python <code>strip()</code></td><td class="nm">the same four minus U+FEFF, the one character the two languages disagree on</td><td class="cp">4</td></tr>
+          <tr><td class="nm">NFKC normalisation</td><td class="nm">nothing; it swaps three instead &mdash; U+00A0 and U+202F become an ordinary space, U+3164 becomes another invisible letter</td><td class="cp">0</td></tr>
+          <tr><td class="nm">keep only ASCII</td><td class="nm">everything not Latin: 11 of the 27 code points in a line mixing accents, an emoji and two other scripts</td><td class="cp">15</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>Two of the eleven survivors are worth knowing by name. The word joiner <code>U+2060</code> is the
+      character most blank-text tools hand out, because unlike <code>U+200B</code> it never offers the
+      browser a place to break a line &mdash; and it walks straight through the four-character recipe,
+      whose range stops at <code>U+200D</code>. The combining grapheme joiner <code>U+034F</code> survives
+      even <code>\p{C}</code>, because Unicode files it under <code>Mn</code>, a combining mark, and not
+      under <code>C</code> at all: the property that reads as &ldquo;every invisible character&rdquo; is
+      not that property.</p>
+
+    <p>The damage from the four-character recipe is not visible in the result. Run it over a family emoji
+      &mdash; one grapheme, seven code points &mdash; and you get four code points back: the three joiners
+      are gone and what was one picture is now four separate people in a row. The same eight-code-point
+      Persian word comes back as seven, the same five-code-point Devanagari word as four. Both still
+      render. Neither is the string you started with.</p>
+
+    <p>The shell has the same split, only there it is silent. <code>sed 's/\u200B//g'</code> matches
+      nothing and exits <code>0</code>; so does <code>sed 's/\x{200b}//g'</code>. The forms that work are
+      the one written in bytes, <code>sed 's/\xe2\x80\x8b//g'</code>, and a literal character handed over
+      by the shell, <code>tr -d $'\u200B'</code>. A cleanup pass built on the escape form reports success
+      and changes nothing.</p>
+
+    <p>One disagreement sits between two languages usually assumed to agree. JavaScript&rsquo;s
+      <code>trim()</code> deletes <code>U+FEFF</code> and Python&rsquo;s <code>strip()</code> does not;
+      the pattern <code>\s</code> matches <code>U+FEFF</code> in JavaScript and not in Python. Both agree
+      on <code>U+00A0</code>, <code>U+2028</code>, <code>U+2029</code> and <code>U+202F</code>. So a field
+      holding five <code>U+FEFF</code> characters is empty to a browser and five characters long to the
+      Python script that reads it.</p>
+
+    <p>That is the line the two modes above are drawing. Default takes out the eight characters that are
+      never load-bearing &mdash; <code>U+00AD</code>, <code>U+034F</code>, <code>U+200B</code>,
+      <code>U+2060</code>, <code>U+FEFF</code> and the three interlinear annotation characters &mdash;
+      including the two that both popular recipes leave behind. Aggressive adds the joiners, the direction
+      marks and the bidi isolates, and the warning under it is there because that is the point where
+      cleanup starts changing what the text says. For the full roster rather than the removal,
+      see <a href="/invisible-characters">the list of what is hiding in there</a>.</p>
+
     <h2>What this keeps by default</h2>
     <p>Some invisible characters carry meaning, so they stay unless you turn on aggressive mode:</p>
     <ul>
