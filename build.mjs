@@ -1,4 +1,4 @@
-import { mkdirSync, copyFileSync, writeFileSync, readdirSync, statSync } from 'node:fs';
+import { mkdirSync, copyFileSync, writeFileSync, readdirSync, statSync, unlinkSync } from 'node:fs';
 import { join } from 'node:path';
 
 const SITE = 'https://stripinvisible.com';
@@ -12,6 +12,9 @@ const EXCLUDE = new Set([
   'package-lock.json',
   'README.md',
   '.gitignore',
+  // local audit scripts that live in the repo root; without this they get
+  // copied into dist and published. `_redirects` must NOT be excluded.
+  '_inv.py',
   'dist',
   'node_modules',
   '.git',
@@ -27,6 +30,18 @@ const assets = readdirSync('.').filter((f) => {
 });
 
 for (const f of assets) copyFileSync(f, join(OUT, f));
+
+// dist is never cleaned by anything else, so a file deleted from the repo root
+// would otherwise linger here — and since the sitemap is built from dist, a
+// deleted page would keep its sitemap entry and get re-published. Prune it.
+const generated = new Set(['robots.txt', 'sitemap.xml']);
+const expected = new Set([...assets, ...generated]);
+for (const f of readdirSync(OUT)) {
+  if (!expected.has(f)) {
+    unlinkSync(join(OUT, f));
+    console.log(`pruned stale ${f}`);
+  }
+}
 
 // Every .html in dist becomes a sitemap entry. 404 is a page too, just not one
 // anyone should be indexing.

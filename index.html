@@ -3,13 +3,13 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Claude Watermark Remover — Remove Invisible Claude Text Watermarks Free</title>
-<meta name="description" content="Paste Claude output and strip invisible Unicode watermarks: zero-width characters, tag characters, private-use marks and hidden formatting. Free, no sign-up, runs entirely in your browser.">
+<title>Strip Invisible Characters — Free Invisible Character Remover</title>
+<meta name="description" content="Paste text and strip invisible Unicode characters: zero-width characters, tag characters, private-use marks and hidden formatting. The report names every codepoint it removed and how many. Free, no sign-up, runs entirely in your browser.">
 <link rel="canonical" href="https://stripinvisible.com/">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://stripinvisible.com/">
-<meta property="og:title" content="Claude Watermark Remover — Remove Invisible Claude Text Watermarks Free">
-<meta property="og:description" content="Strip invisible Unicode watermarks from Claude output: zero-width characters, tag characters, private-use marks and hidden formatting. Free, no sign-up, runs entirely in your browser.">
+<meta property="og:title" content="Strip Invisible Characters — Free Invisible Character Remover">
+<meta property="og:description" content="Paste text and strip invisible Unicode characters: zero-width characters, tag characters, private-use marks and hidden formatting. The report names every codepoint it removed and how many. Free, no sign-up, runs entirely in your browser.">
 <meta name="twitter:card" content="summary">
 <meta property="og:image" content="https://stripinvisible.com/og-image.png">
 <meta property="og:image:width" content="1200">
@@ -24,52 +24,77 @@
   "@graph": [
     {
       "@type": "WebApplication",
-      "name": "Claude Watermark Remover",
+      "name": "Strip Invisible Characters",
       "url": "https://stripinvisible.com/",
       "applicationCategory": "UtilitiesApplication",
       "operatingSystem": "Any (runs in a web browser)",
       "browserRequirements": "Requires JavaScript",
       "isAccessibleForFree": true,
-      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
-      "description": "Paste Claude output and strip invisible Unicode watermarks: zero-width characters, tag characters, private-use marks and hidden formatting. Free, no sign-up, runs entirely in your browser."
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      },
+      "description": "Paste text and strip invisible Unicode characters: zero-width characters, tag characters, private-use marks and hidden formatting. The report names every codepoint it removed and how many. Free, no sign-up, runs entirely in your browser."
     },
     {
       "@type": "FAQPage",
       "mainEntity": [
         {
           "@type": "Question",
-          "name": "How do I remove a Claude watermark?",
-          "acceptedAnswer": { "@type": "Answer", "text": "Paste the text into the box and press Remove watermark. The invisible characters come out, the report tells you which ones and how many, and you copy the cleaned text in one click." }
+          "name": "What is an invisible character?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "A Unicode character that holds a position in your string and draws nothing on screen. Most are format characters, general category Cf. The one you almost certainly have is U+200B ZERO WIDTH SPACE: three bytes, one character, invisible, and it survives copy and paste."
+          }
         },
         {
           "@type": "Question",
-          "name": "Is this Claude watermark remover free?",
-          "acceptedAnswer": { "@type": "Answer", "text": "Yes. Free, no sign-up, no account, no usage counter and no email wall. It is a single static page with no server behind it, so there is nothing to meter." }
+          "name": "How do I remove invisible characters?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Paste the text into the box and press Remove invisible characters. The characters come out, the report lists every codepoint it removed and how many of each, and you copy the cleaned text in one click. Nothing is uploaded — the work happens in this tab."
+          }
         },
         {
           "@type": "Question",
-          "name": "Can I remove Claude watermarks on my phone?",
-          "acceptedAnswer": { "@type": "Answer", "text": "Yes. The page is one column on a narrow screen, the text boxes resize to the viewport, and the report table scrolls sideways instead of pushing the layout apart." }
-        },
-        {
-          "@type": "Question",
-          "name": "Does it work on Claude Code output?",
-          "acceptedAnswer": { "@type": "Answer", "text": "Yes for the invisible-character layer. Code pasted out of Claude Code carries the same zero-width and tag characters as prose, and they corrupt search, JSON and diffs, so removing them is worth doing on its own." }
+          "name": "Does this remove a Claude watermark?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "It removes the invisible-character layer of one. Text that comes out of Claude can carry zero-width and tag characters, and those are found and deleted deterministically. The other layer is a statistical pattern in the word choice itself, which is not a character and cannot be deleted here — that needs a rewrite, which is a different job."
+          }
         },
         {
           "@type": "Question",
           "name": "Will this make my text undetectable by AI detectors?",
-          "acceptedAnswer": { "@type": "Answer", "text": "No. This removes invisible characters. It does not rewrite your wording, so the statistical pattern in the word choice stays. If you need that changed, you need a rewrite, which is a different tool." }
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "No, and any page promising that is guessing. This removes invisible characters. It does not rewrite your wording, so the statistical pattern in the word choice stays. There is no removal score and no “percent human” number here, because a browser-side tool has no way to verify one."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Which characters does it keep?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "The ones that carry meaning. U+200D holds emoji families together as one picture, U+200C is required for correct Persian, Arabic and Devanagari, and U+FE0F keeps an emoji rendering as an emoji. Those stay unless you turn on aggressive mode, which takes them out too."
+          }
         },
         {
           "@type": "Question",
           "name": "Do you store what I paste?",
-          "acceptedAnswer": { "@type": "Answer", "text": "No. There is no backend and no analytics. The cleaning happens in this tab and the text never leaves your device." }
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "No. There is no backend and no analytics. The cleaning happens in this tab and the text never leaves your device."
+          }
         },
         {
           "@type": "Question",
-          "name": "What is the difference between remove Claude watermark and Claude watermark remover?",
-          "acceptedAnswer": { "@type": "Answer", "text": "Same job, same page. People search it both ways, along with Claude watermark remover free. All of it lands here: paste text, strip the invisible marks, copy the result." }
+          "name": "Is it free, and does it work on a phone?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Free, no sign-up, no account, no usage counter and no email wall — it is a single static page with no server behind it, so there is nothing to meter. On a phone the page is one column, the text boxes resize to the viewport, and the report table scrolls sideways instead of pushing the layout apart."
+          }
         }
       ]
     }
@@ -80,9 +105,9 @@
 <body>
 <main>
 
-  <h1>Claude Watermark Remover</h1>
+  <h1>Strip Invisible Characters</h1>
 
-  <p class="crosslink">Working with hidden characters outside Claude? Try the
+  <p class="crosslink">Working with hidden characters? Try the
     <a href="/zero-width-space">zero-width space remover</a>, which shows you where
     each invisible character sits before you delete it, or the
     <a href="/clean-json">JSON cleaner</a> if it is a payload that will not parse, or the
@@ -92,7 +117,7 @@
     Building JSON in JavaScript? <a href="/line-separators">U+2028 and U+2029</a>.
     Text that looks clean but is not empty? <a href="/tag-characters">Unicode tag characters</a>
     hide a whole ASCII message with nothing on screen.
-    Want to know what an <a href="/invisible-character">invisible character</a> actually does to a
+    Want to know what an <a href="/invisible-characters">invisible character</a> actually does to a
     form field? Measured: browsers reject all 128 zero-width ones in an email field.
     Two unrelated things get called <a href="/invisible-text">invisible text</a>: format characters
     that measure 0.00 px and cannot be searched for at all, and the Hangul fillers that most
@@ -122,8 +147,8 @@
   <section class="tool">
 
     <div class="pane">
-      <label for="input">Paste Claude output</label>
-      <textarea id="input" spellcheck="false" placeholder="Paste text you got from Claude here..."></textarea>
+      <label for="input">Paste your text</label>
+      <textarea id="input" spellcheck="false" placeholder="Paste text here..."></textarea>
 
       <div class="row meta">
         <input type="file" id="file" accept=".txt,.md,.markdown,.html,.htm,.csv,.json,.log,text/plain">
@@ -160,7 +185,7 @@
       </fieldset>
 
       <div class="row">
-        <button id="run" class="primary" type="button">Remove watermark</button>
+        <button id="run" class="primary" type="button">Remove invisible characters</button>
         <button id="clear" type="button">Clear</button>
       </div>
     </div>
@@ -182,7 +207,7 @@
 
   <section>
     <h2>What this removes</h2>
-    <p>Invisible Unicode characters that survive copy and paste out of Claude:</p>
+    <p>Invisible Unicode characters that survive copy and paste:</p>
     <ul>
       <li><code>U+200B</code> zero width space, <code>U+2060</code> word joiner, <code>U+FEFF</code> BOM</li>
       <li><code>U+00AD</code> soft hyphen, <code>U+034F</code> combining grapheme joiner</li>
@@ -203,7 +228,7 @@
     </ul>
 
     <h2>What this cannot remove</h2>
-    <p>Claude&rsquo;s text watermark has two separate layers. This tool only handles the first one.</p>
+    <p>A Claude watermark has two separate layers, and this tool handles only the first one.</p>
     <p>The first layer is invisible characters. Those are listed above, they can be found and deleted deterministically, and this tool shows you exactly what it took out.</p>
     <p>The second layer is a statistical pattern carried by word choice itself. It is not a character you can delete &mdash; it is the sequence of words Claude picked. Removing it means rewriting the wording, which is a different job. This page does not rewrite your sentences, so it does not touch that layer. We show no removal score and no &ldquo;percent human&rdquo; number, because a browser-side tool has no way to verify one, and a number nobody can check is just decoration.</p>
 
@@ -220,28 +245,28 @@
   </section>
 
   <section>
-    <h2>FAQ</h2>
+        <h2>FAQ</h2>
 
-    <h3>How do I remove a Claude watermark?</h3>
-    <p>Paste the text into the box above and press <em>Remove watermark</em>. The invisible characters come out, the report tells you which ones and how many, and you copy the cleaned text in one click.</p>
+    <h3>What is an invisible character?</h3>
+    <p>A Unicode character that holds a position in your string and draws nothing on screen. Most are format characters, general category Cf. The one you almost certainly have is U+200B ZERO WIDTH SPACE: three bytes, one character, invisible, and it survives copy and paste.</p>
 
-    <h3>Is this Claude watermark remover free?</h3>
-    <p>Yes. Free, no sign-up, no account, no usage counter and no email wall. It is a single static page with no server behind it, so there is nothing to meter.</p>
+    <h3>How do I remove invisible characters?</h3>
+    <p>Paste the text into the box and press Remove invisible characters. The characters come out, the report lists every codepoint it removed and how many of each, and you copy the cleaned text in one click. Nothing is uploaded &mdash; the work happens in this tab.</p>
 
-    <h3>Can I remove Claude watermarks on my phone?</h3>
-    <p>Yes. The page is one column on a narrow screen, the text boxes resize to the viewport, and the report table scrolls sideways instead of pushing the layout apart.</p>
-
-    <h3>Does it work on Claude Code output?</h3>
-    <p>Yes for the invisible-character layer. Code pasted out of Claude Code carries the same zero-width and tag characters as prose, and they corrupt search, JSON and diffs &mdash; removing them is worth doing on its own.</p>
+    <h3>Does this remove a Claude watermark?</h3>
+    <p>It removes the invisible-character layer of one. Text that comes out of Claude can carry zero-width and tag characters, and those are found and deleted deterministically. The other layer is a statistical pattern in the word choice itself, which is not a character and cannot be deleted here &mdash; that needs a rewrite, which is a different job.</p>
 
     <h3>Will this make my text undetectable by AI detectors?</h3>
-    <p>No, and any page promising that is guessing. This removes invisible characters. It does not rewrite your wording, so the statistical pattern in the word choice stays. If you need that changed, you need a rewrite, which is a different tool.</p>
+    <p>No, and any page promising that is guessing. This removes invisible characters. It does not rewrite your wording, so the statistical pattern in the word choice stays. There is no removal score and no &ldquo;percent human&rdquo; number here, because a browser-side tool has no way to verify one.</p>
+
+    <h3>Which characters does it keep?</h3>
+    <p>The ones that carry meaning. U+200D holds emoji families together as one picture, U+200C is required for correct Persian, Arabic and Devanagari, and U+FE0F keeps an emoji rendering as an emoji. Those stay unless you turn on aggressive mode, which takes them out too.</p>
 
     <h3>Do you store what I paste?</h3>
     <p>No. There is no backend and no analytics. The cleaning happens in this tab and the text never leaves your device.</p>
 
-    <h3>What is the difference between &ldquo;remove Claude watermark&rdquo; and &ldquo;Claude watermark remover&rdquo;?</h3>
-    <p>Same job, same page. People search it both ways, along with &ldquo;Claude watermark remover free&rdquo;. All of it lands here: paste text, strip the invisible marks, copy the result.</p>
+    <h3>Is it free, and does it work on a phone?</h3>
+    <p>Free, no sign-up, no account, no usage counter and no email wall &mdash; it is a single static page with no server behind it, so there is nothing to meter. On a phone the page is one column, the text boxes resize to the viewport, and the report table scrolls sideways instead of pushing the layout apart.</p>
   </section>
 
 
