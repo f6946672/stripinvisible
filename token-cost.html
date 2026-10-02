@@ -115,6 +115,169 @@
       unavailable for the content you actually wanted in the window.</li>
   </ul>
 
+  <h2>What it costs to hide an instruction</h2>
+  <p>A watermark only has to be present. A hidden instruction has to be read. Both are carried the
+    same way, so the same question applies: what does it cost to put a sentence into a document
+    where nobody can see it? Measured, hiding one 72-character sentence costs about
+    <strong>24 times</strong> what typing it in the open would &mdash; roughly 280 tokens instead of
+    12. And the carriers that cost the least to hide are the ones that survive the most cleaning.</p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Carrier</th>
+        <th>Code points</th>
+        <th>UTF-8 bytes</th>
+        <th>Tokens (o200k_base)</th>
+        <th>Tokens (cl100k_base)</th>
+        <th>Compared with typing it out</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="name">Zero-width binary: U+200B for 0, U+200C for 1, eight per byte</td>
+        <td class="cp">576</td>
+        <td class="cp">1,728</td>
+        <td class="cp">347</td>
+        <td class="cp">471</td>
+        <td class="cp"><strong>28.9&times;</strong></td>
+      </tr>
+      <tr>
+        <td class="name">Tag characters: U+E0000 plus the character code, one per character</td>
+        <td class="cp">72</td>
+        <td class="cp">288</td>
+        <td class="cp">277</td>
+        <td class="cp">216</td>
+        <td class="cp"><strong>23.1&times;</strong></td>
+      </tr>
+      <tr>
+        <td class="name">Variation selectors: U+E0100 plus the character code, one per character</td>
+        <td class="cp">72</td>
+        <td class="cp">288</td>
+        <td class="cp">288</td>
+        <td class="cp">287</td>
+        <td class="cp"><strong>24.0&times;</strong></td>
+      </tr>
+      <tr>
+        <td class="name">The same sentence, typed in the open</td>
+        <td class="cp">72</td>
+        <td class="cp">72</td>
+        <td class="cp">12</td>
+        <td class="cp">12</td>
+        <td class="cp">1&times;</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>Put into a 1,000-word document that costs 1,140 tokens on its own, that payload adds
+    <strong>24.4% to 30.4%</strong> to the bill. The same sentence typed in the open adds 1.05%.
+    Hiding text is not the cheap version of sending it. Per character it is between 23 and 29 times
+    more expensive, and the cheapest of the three is not the one most people watch for. Measured one
+    at a time inside a word: a variation selector costs five tokens in both encodings, a tag
+    character five in <code>o200k_base</code> and four in <code>cl100k_base</code>, a zero-width
+    space two.</p>
+
+  <p>The more awkward part is what survives. Seven ordinary cleaning steps were run against all
+    three payloads, in JavaScript and in Python, and the two languages agreed on every row.</p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Cleaning step</th>
+        <th>Zero-width binary</th>
+        <th>Tag characters</th>
+        <th>Variation selectors</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="name"><code>trim()</code> / <code>strip()</code></td>
+        <td class="cp">intact</td>
+        <td class="cp">intact</td>
+        <td class="cp">intact</td>
+      </tr>
+      <tr>
+        <td class="name">NFC, NFD, NFKC, NFKD</td>
+        <td class="cp">intact</td>
+        <td class="cp">intact</td>
+        <td class="cp">intact</td>
+      </tr>
+      <tr>
+        <td class="name">The popular <code>[\u200B-\u200D\uFEFF]</code></td>
+        <td class="cp">gone</td>
+        <td class="cp">intact</td>
+        <td class="cp">intact</td>
+      </tr>
+      <tr>
+        <td class="name"><code>\p{C}</code>, everything in the Other category</td>
+        <td class="cp">gone</td>
+        <td class="cp">gone</td>
+        <td class="cp"><strong>intact</strong></td>
+      </tr>
+      <tr>
+        <td class="name"><code>\p{Cf}</code>, format characters only</td>
+        <td class="cp">gone</td>
+        <td class="cp">gone</td>
+        <td class="cp"><strong>intact</strong></td>
+      </tr>
+      <tr>
+        <td class="name"><code>\p{M}</code>, all combining marks</td>
+        <td class="cp">intact</td>
+        <td class="cp">intact</td>
+        <td class="cp">gone</td>
+      </tr>
+      <tr>
+        <td class="name">ASCII-only filter</td>
+        <td class="cp">gone</td>
+        <td class="cp">gone</td>
+        <td class="cp">gone</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>The name people reach for when they want to strip invisible characters is
+    <code>\p{C}</code>, and it works on two of the three. It leaves the variation-selector payload
+    completely readable: all 72 characters came back out of the cleaned string. The reason is a
+    classification detail rather than a clever trick &mdash; U+E0100 to U+E01EF are
+    <code>Mn</code>, combining marks, not <code>C</code>. A selector with nothing to select still
+    takes up a code point, still carries its bytes, and still costs its tokens. In Chromium at
+    16 px it measured <strong>0.00 px wide with zero painted pixels</strong>, against 503.06 px and
+    2,619 painted pixels for the same sentence typed in the open.</p>
+
+  <p>Which sounds like an argument for stripping all combining marks instead, and that is where the
+    trade-off actually sits. Run <code>\p{M}</code> over a single line of ordinary text &mdash;
+    three accented words, two emoji that carry a presentation selector, and two words in Devanagari
+    &mdash; and it removed 9 of 41 code points in decomposed form, 5 of 37 in composed form. Every
+    accent went, both emoji lost the selector that makes them render as emoji rather than as the
+    plain black symbol, and the Devanagari words lost three of the signs they need, which leaves
+    them misspelled rather than merely unaccented. The choice is not between cleaning and not
+    cleaning. It is between which kind of real text you are willing to damage, and there is no
+    setting that damages only the part you wanted gone.</p>
+
+  <p>Detection has the same shape. Blocked together at the end of a document, the three payloads
+    produce runs of 576, 72 and 72 consecutive invisible code points and are caught immediately by
+    any scanner that flags three or more in a row. Spread one code point per word, the longest run
+    of invisible characters in the whole document is <strong>one</strong>, and such a scanner sees
+    nothing at all. Spreading costs nothing: with the payload spread, the rendered box measured
+    1280 &times; 201.52 px, exactly what the clean version of the same paragraph measured, and the
+    token count was unchanged. The one-code-point carriers need 7.2% of the words to carry one; the
+    binary carrier needs 57.6%.</p>
+
+  <p>Nothing in the ordinary path removes it either. After selecting the whole rendered paragraph
+    and pressing Ctrl+C, the full 72-character sentence was recovered intact from the clipboard,
+    with the payload spread one code point per word. <code>innerText</code> and
+    <code>textContent</code> both returned 1,585 characters &mdash; the page's own view of itself
+    does not drop any of it. Whether a model then obeys a hidden instruction is a separate question
+    from whether it receives one, and it is the question people argue about. The receiving end is
+    not in dispute: the characters are in the token stream, they are billed, and no step in a
+    normal copy-and-paste takes them out. Of the seven cleaning steps above, only the ASCII-only
+    filter removed all three.</p>
+
+  <p>Measured 2026-10-02 with tiktoken on a 1,000-word English sample, in both
+    <code>o200k_base</code> and <code>cl100k_base</code>; survival checked in Python against
+    Unicode 15.1 and in Node against Unicode 17, which returned the same answer for every row;
+    rendering and clipboard measured in Chromium.</p>
+
   <h2>Check your own text</h2>
   <p>Count the invisible characters first, then multiply. The
     <a href="/zero-width-space">zero-width space remover</a> shows you where they sit and how many
@@ -149,8 +312,9 @@ print(len(enc.encode(dirty)), len(enc.encode(clean)),
     <a href="/clean-json">JSON cleaner</a>,
     <a href="/clean-excel">Excel cell cleaner</a>,
     <a href="/invisible-characters">invisible characters list</a>.
-    The most expensive ones are the <a href="/tag-characters">Unicode tag characters</a>, at four
-    tokens each.</p>
+    The most expensive per code point are the variation selectors in the U+E0100 block, at five
+    tokens each in both encodings, against five and four for the
+    <a href="/tag-characters">Unicode tag characters</a>.</p>
 
   <footer class="foot">
     <a href="/about">About</a> &middot; <a href="/privacy">Privacy</a> &middot; <a href="/contact">Contact</a> &middot; <a href="https://github.com/f6946672/stripinvisible/blob/main/token-cost.html">Source</a>
