@@ -1,0 +1,389 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Blank Text Message: Why a Space Fails and One Character Sends</title>
+<meta name="description" content="A blank text message works because the send button tests trim, not length. Measured in Chromium 153: an empty chat bubble is 16 px, a bubble with one space is 16 px, and only 16 of 23 invisible characters get past the emptiness check. Which ones draw nothing and which reserve a full em.">
+<link rel="canonical" href="https://stripinvisible.com/blank-text-message">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://stripinvisible.com/blank-text-message">
+<meta property="og:title" content="Blank Text Message: Why a Space Fails and One Character Sends">
+<meta property="og:description" content="An empty bubble is 16 px tall. One space leaves it at 16 px. One invisible character takes it to 38.39 px — but only 16 of 23 get past the send button's emptiness check.">
+<meta name="twitter:card" content="summary">
+<meta property="og:image" content="https://stripinvisible.com/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:image" content="https://stripinvisible.com/og-image.png">
+
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/styles.css">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebPage",
+      "name": "Blank Text Message: Why a Space Fails and One Character Sends",
+      "url": "https://stripinvisible.com/blank-text-message",
+      "description": "Why a space does not produce a blank text message and an invisible character does, measured in Chromium 153: bubble height, the send button's trim gate, ink versus advance width, and what a contenteditable comment box does differently."
+    },
+    {
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "Strip Invisible", "item": "https://stripinvisible.com/" },
+        { "@type": "ListItem", "position": 2, "name": "Blank Text Message" }
+      ]
+    },
+    {
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "Why won't a blank text message send when I use a space?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Because a space fails both gates. Measured in Chromium 153, a chat bubble holding one ordinary space is 16 px tall — exactly the height of an empty bubble — while a bubble holding one letter is 38.39 px. And the send button's emptiness check is a trim, which removes a space. So the message is not laid out and the button stays disabled. An invisible character fails neither: it takes the bubble to 38.39 px and survives trim." }
+        },
+        {
+          "@type": "Question",
+          "name": "Which character should I use for a blank text message?",
+          "acceptedAnswer": { "@type": "Answer", "text": "One that advances the cursor by nothing. Measured on a canvas at 64 px, 13 of the 23 invisible characters tested draw no ink and advance 0 px, including U+200B and U+2060, and both also survive a trim. The one most often recommended for this, U+3164 Hangul Filler, advances a full 64 px at that size — a whole em of blank width — so the bubble ends up wider than a blank message should be." }
+        },
+        {
+          "@type": "Question",
+          "name": "Does a blank message arrive as an empty bubble?",
+          "acceptedAnswer": { "@type": "Answer", "text": "It arrives as a bubble with nothing drawn in it, which is not the same as an empty bubble. Measured in Chromium 153, ten copies of a zero-width character keep the bubble at 24 px wide, while ten copies of U+3164 blow it out to 184 px. The recipient sees a message with no visible text and a bubble whose width gives away how many characters are in it." }
+        },
+        {
+          "@type": "Question",
+          "name": "Why does the app say 'Cannot send an empty message'?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Because that check runs on the payload rather than on what you typed, and it is a string check rather than a length check. It refuses a genuinely empty string and accepts anything that survives a trim, which is why a single invisible character passes a check that a space fails. The error appears when the payload the app builds is empty, which can happen for reasons that have nothing to do with the character you chose." }
+        },
+        {
+          "@type": "Question",
+          "name": "Does a blank message work in an Instagram comment or DM box?",
+          "acceptedAnswer": { "@type": "Answer", "text": "The rule is the same but the box is a different kind of field, and that adds a step. Measured in Chromium 153, an input, a textarea and a contenteditable all give the same trim verdict for all 23 characters — but a contenteditable is not submitted by a form at all. Measured with FormData, it contributes no key, so its text has to be copied into a hidden input first, and the character passes through one more conversion that can drop it." }
+        },
+        {
+          "@type": "Question",
+          "name": "Is a blank text message the same thing as a zero-width space?",
+          "acceptedAnswer": { "@type": "Answer", "text": "No. A zero-width space, U+200B, is one of several characters that can do the job and is the one with no width and no ink. Measured on a canvas at 64 px it draws 0 ink pixels and advances 0 px. But 10 of the 23 characters tested advance the cursor while drawing nothing, and one of those advances a full em, so picking any invisible character is not the same as picking a blank one." }
+        }
+      ]
+    }
+  ]
+}
+</script>
+</head>
+<body>
+<main>
+
+  <nav class="crumbs" aria-label="Breadcrumb">
+    <a href="/">Strip Invisible</a> &rsaquo; <span>Blank Text Message</span>
+  </nav>
+
+  <h1>Blank text message: the bubble stays empty for a space, and a character that draws no ink sends anyway</h1>
+
+  <p class="lede"><strong>Short answer:</strong> a blank text message works because the send button
+    never asks &ldquo;is there a message&rdquo;. It asks &ldquo;is there anything in the box that a
+    trim would not remove&rdquo;. Measured in Chromium 153, an empty chat bubble is
+    <strong>16 px</strong> tall, a bubble holding one letter is <strong>38.39 px</strong>, and a
+    bubble holding one ordinary space is <strong>16 px again</strong>. All 23 invisible characters
+    tested take the bubble to 38.39 px, but only <strong>16 of 23</strong> get past the emptiness
+    check, and the seven that do not are exactly the seven <code>trim()</code> deletes. The character
+    most often recommended for this job, U+3164, is also the one that reserves a
+    <strong>full em of width</strong>.</p>
+
+  <nav class="crosslink" aria-label="On this page">
+    On this page:
+    <a href="#empty-message-copy-paste">empty message copy paste</a> &middot;
+    <a href="#invisible-message-copy-paste">invisible message copy paste</a> &middot;
+    <a href="#send-blank-message">send blank message</a> &middot;
+    <a href="#blank-message-for-instagram">blank message for Instagram</a>
+  </nav>
+
+  <div class="tool">
+    <div class="pane">
+      <label>Characters to try in a message box</label>
+      <button class="grabbtn primary" type="button" data-cp="8203" data-label="U+200B zero width space">Copy U+200B <span class="grabcp">0 px wide</span></button>
+      <button class="grabbtn" type="button" data-cp="8288" data-label="U+2060 word joiner">Copy U+2060 <span class="grabcp">0 px wide</span></button>
+      <button class="grabbtn" type="button" data-cp="173" data-label="U+00AD soft hyphen">Copy U+00AD <span class="grabcp">0 px wide</span></button>
+      <button class="grabbtn" type="button" data-cp="12644" data-label="U+3164 hangul filler">Copy U+3164 <span class="grabcp">a full em wide</span></button>
+      <p class="row meta">Refused by the send button, for contrast:
+        <button class="grabbtn" type="button" data-cp="160" data-label="U+00A0 no-break space">Copy U+00A0 <span class="grabcp">trim eats it</span></button>
+      </p>
+    </div>
+    <div class="pane">
+      <label>What you just copied</label>
+      <p>One character each. The first three draw no ink <em>and</em> advance the cursor by nothing,
+        so the bubble contains a message and shows no width for it. The fourth also survives the
+        emptiness check and also draws no ink, but it advances a full em &mdash; 64 px at a 64 px
+        font &mdash; so ten of them make a bubble 184 px wide. U+00A0 is the control: it advances
+        19 px, draws nothing, and <code>trim()</code> removes it, so it looks like a blank message
+        and is refused like a space.</p>
+      <p class="row meta">Everything below was measured, not looked up: Chromium 153.0.8010.12 via
+        Playwright for the bubble, the canvas, the field types and the form submission, plus Node
+        22.22.2 for the string checks.</p>
+    </div>
+  </div>
+
+  <h2>Two gates, and an ordinary space fails both</h2>
+
+  <p>Two separate things stand between you and a blank message. The first is <strong>layout</strong>:
+    whether the renderer has anything to draw. The second is the <strong>string check</strong> behind
+    the send button. A space fails the first because a whitespace-only text node produces no line box,
+    and it fails the second because a trim deletes it.</p>
+
+  <div class="scroll">
+    <table>
+      <thead>
+        <tr><th>In the bubble</th><th>Height</th><th>What the renderer did</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="nm">nothing at all</td><td class="cp">16.00 px</td><td class="cp">padding only</td></tr>
+        <tr><td class="nm">one ordinary letter</td><td class="cp">38.39 px</td><td class="cp">one line box</td></tr>
+        <tr><td class="nm">one ordinary space</td><td class="cp">16.00 px</td><td class="cp">padding only &mdash; nothing to lay out</td></tr>
+        <tr><td class="nm">any of the 23 invisible characters</td><td class="cp">38.39 px</td><td class="cp">one line box, same as a letter</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>So a space does not disappear; it is stored and skipped at layout time. The check behind the
+    button is the obvious one: refuse the message if the field value is empty <em>after
+    trimming</em>.</p>
+
+  <div class="scroll">
+    <table>
+      <thead>
+        <tr><th>Value in the field</th><th>Passes the <code>trim()</code> check</th><th>Which characters</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="nm">an ordinary space</td><td class="cp">no</td><td class="cp">&mdash;</td></tr>
+        <tr><td class="nm">23 invisible characters</td><td class="cp">16 of 23</td><td class="cp">everything except the seven below</td></tr>
+        <tr><td class="nm">the seven that fail</td><td class="cp">0 of 7</td><td class="cp">U+00A0, U+2028, U+2029, U+202F, U+205F, U+3000, U+FEFF</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>The seven that fail are exactly the code points JavaScript's <code>trim()</code> removes, so the
+    split is not &ldquo;invisible&rdquo; against &ldquo;visible&rdquo; but &ldquo;whitespace to the
+    language&rdquo; against &ldquo;not&rdquo; &mdash; and seven of the characters handed out for this
+    job are on the wrong side of it. U+00A0 is the one to watch: the old advice for a blank message
+    was a no-break space, and it advances 19 px, so it looks like it worked while the button refuses
+    it. People meet this without knowing why. The clearest account of the behaviour is someone whose
+    handset would not show a send button until they typed characters and not just a space, while blank
+    messages kept arriving from a contact who had not sent any.</p>
+
+  <h2>The placeholder is the one signal that lies to you</h2>
+
+  <p>The only feedback a message box gives you is the placeholder text disappearing, and that signal is
+    not the one you want. A placeholder hides whenever the value is not the empty string, and one
+    ordinary space is not the empty string. Measured in Chromium 153 with
+    <code>:placeholder-shown</code>, the placeholder is gone for a space, and the trim-based check
+    still refuses it.</p>
+
+  <div class="scroll">
+    <table>
+      <thead>
+        <tr><th>Value in the box</th><th>Placeholder still shown</th><th>Send button would refuse</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="nm">empty string</td><td class="cp">yes</td><td class="cp">yes</td></tr>
+        <tr><td class="nm">one ordinary space</td><td class="cp">no</td><td class="cp">yes</td></tr>
+        <tr><td class="nm">U+00A0, U+202F, U+205F, U+3000, U+FEFF</td><td class="cp">no</td><td class="cp">yes</td></tr>
+        <tr><td class="nm">U+200B, U+2060, U+00AD, U+3164</td><td class="cp">no</td><td class="cp">no</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>So the placeholder vanishing says the DOM has a text node, and nothing about whether the app will
+    send. Five of the characters behave exactly like a space on both rows: the box looks occupied, the
+    button stays dead, and there is no visible reason why. A better test is to type a second character
+    and delete it &mdash; if the button lights up and stays lit, something is in there. One length rule
+    points the other way: measured on a <code>required</code> field, all 23 characters count as filled
+    in, including the seven whose <code>trim()</code> length is zero, while the empty string counts as
+    missing.</p>
+
+  <h2 id="empty-message-copy-paste">Empty message copy paste: the characters worth copying, and the one to skip</h2>
+
+  <p>An invisible character does two jobs at once and they come apart: it can <em>draw</em> nothing,
+    and it can <em>advance</em> the cursor by nothing. The characters people hand out are usually
+    invisible in the first sense and not in the second, which is why a blank message so often arrives
+    with a gap in it. Drawing each character to a canvas at 64 px and counting the pixels that are not
+    the background separates the two.</p>
+
+  <div class="scroll">
+    <table>
+      <thead>
+        <tr><th>Character</th><th>Ink drawn</th><th>Advance</th><th>What it does in a bubble</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="nm">an ordinary letter</td><td class="cp">1066 px</td><td class="cp">63 px</td><td class="cp">a visible character</td></tr>
+        <tr><td class="nm">an ordinary space</td><td class="cp">0 px</td><td class="cp">19 px</td><td class="cp">a gap, and the button refuses it</td></tr>
+        <tr><td class="nm">U+200B zero width space</td><td class="cp">0 px</td><td class="cp">0 px</td><td class="cp">nothing, and it sends</td></tr>
+        <tr><td class="nm">U+2060 word joiner</td><td class="cp">0 px</td><td class="cp">0 px</td><td class="cp">nothing, and it sends</td></tr>
+        <tr><td class="nm">U+00AD soft hyphen</td><td class="cp">0 px</td><td class="cp">0 px</td><td class="cp">nothing, and it sends</td></tr>
+        <tr><td class="nm">U+200C, U+200D, U+200E, U+200F</td><td class="cp">0 px</td><td class="cp">0 px</td><td class="cp">nothing, and they send</td></tr>
+        <tr><td class="nm">U+034F, U+061C, U+180E, U+E0001, U+E0020</td><td class="cp">0 px</td><td class="cp">0 px</td><td class="cp">nothing, and they send</td></tr>
+        <tr><td class="nm">U+202F narrow no-break space</td><td class="cp">0 px</td><td class="cp">10 px</td><td class="cp">a thin gap, and it is refused</td></tr>
+        <tr><td class="nm">U+205F medium math space</td><td class="cp">0 px</td><td class="cp">14 px</td><td class="cp">a gap, and it is refused</td></tr>
+        <tr><td class="nm">U+00A0 no-break space</td><td class="cp">0 px</td><td class="cp">19 px</td><td class="cp">a gap the size of a space, refused</td></tr>
+        <tr><td class="nm">U+3000 ideographic space</td><td class="cp">0 px</td><td class="cp">64 px</td><td class="cp">a full em of gap, refused</td></tr>
+        <tr><td class="nm">U+3164 hangul filler</td><td class="cp">0 px</td><td class="cp">64 px</td><td class="cp">a full em of gap, and it sends</td></tr>
+        <tr><td class="nm">U+FFA0 halfwidth hangul filler</td><td class="cp">0 px</td><td class="cp">32 px</td><td class="cp">half an em of gap, and it sends</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>The last three rows are the ones that get recommended and the ones that leave a mark. U+3164
+    Hangul Filler is the most common answer to &ldquo;how do I send a blank message&rdquo;, and
+    measured it reserves a full em: 64 px at a 64 px font, and the same 16 px cell a chat bubble uses
+    at 16 px. Ten copies of it occupy 184 px of bubble. It draws no ink, and it is not blank in the
+    sense that a reader can see how much of it there is.</p>
+
+  <p>None of the 23 drew any ink in the font stack measured here, which is worth stating because the
+    usual description of these characters on a phone is a box. A box is what you get when the font has
+    no glyph for the code point at all. The advance is a property of the character, the box is a
+    property of the device, and only the first one travels with your message.</p>
+
+  <h2 id="invisible-message-copy-paste">Invisible message copy paste: what the other person actually sees</h2>
+
+  <p>Nothing is drawn, and the bubble is still not the size of an empty one. Measured in Chromium 153,
+    ten copies of a zero-width character leave the bubble at <strong>24 px</strong> wide &mdash; the
+    padding and no more &mdash; while ten copies of U+3164 take it to <strong>184 px</strong>. The
+    recipient gets a message with no text in it and a bubble whose width counts how many characters
+    you sent.</p>
+
+  <div class="scroll">
+    <table>
+      <thead>
+        <tr><th>Ten copies of</th><th>Bubble width</th><th>Counter in the field</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="nm">U+200B</td><td class="cp">24 px</td><td class="cp">10</td></tr>
+        <tr><td class="nm">U+2060</td><td class="cp">24 px</td><td class="cp">10</td></tr>
+        <tr><td class="nm">U+FEFF</td><td class="cp">24 px</td><td class="cp">10</td></tr>
+        <tr><td class="nm">U+3164</td><td class="cp">184 px</td><td class="cp">10</td></tr>
+        <tr><td class="nm">U+E0020</td><td class="cp">24 px</td><td class="cp">20</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>The last row is a second way the numbers on screen stop matching the message. U+E0020 is a tag
+    character, and one of them is <strong>two UTF-16 units</strong>, so a field that counts units
+    reports twenty where you typed ten &mdash; and neither number is the length of the message the
+    recipient sees, which is zero either way. The width also shows up in the notification: a chat list
+    row is drawn from the same string, so a blank message of U+3164 produces a gap after the sender's
+    name where an ordinary message would have a word, and a message of U+200B produces a row that
+    looks exactly like a message with no text.</p>
+
+  <h2 id="send-blank-message">Send blank message: what the app says when it refuses</h2>
+
+  <p>The wording of the refusal names the check. One messaging API returns <em>Cannot send an empty
+    message</em> to developers who assemble the payload wrong. A chat app returns <em>Can't send empty
+    message</em> when an Android intent arrives with an empty body. A bot platform answers with the
+    same phrase again, and it appears across three separate questions from three different people who
+    were each right that their own code was fine &mdash; because the payload the app built was
+    genuinely empty even though the field they typed into was not.</p>
+
+  <p>That is the useful part: the check runs on the payload, and it is a string check, so it accepts
+    anything a trim leaves behind. It also means the failure can come from a step between your field
+    and the payload &mdash; a share link that collapses its line breaks, a text extraction that
+    returns nothing, a reply window that opens with no body. It is also why &ldquo;try a space or an
+    HTML entity&rdquo; is a dead end, and you can watch someone walk into it: on a bot platform where
+    the send method requires text, the asker reports trying a space and trying an entity and getting
+    nowhere.</p>
+
+  <p>The field type changes none of this. Measured across an <code>&lt;input&gt;</code>, a
+    <code>&lt;textarea&gt;</code> and a <code>contenteditable</code>, all three give the same trim
+    verdict for all 23 characters &mdash; the same 16 pass and the same seven fail. A comment box that
+    is not an input is not testing something different; it is testing the same thing on a string it
+    has to go and collect.</p>
+
+  <h2 id="blank-message-for-instagram">Blank message for Instagram: the same rule with one extra hop</h2>
+
+  <p>The rule does not change on a social app, but the box might, and that adds a step that can lose
+    the character. A comment or direct-message box on the web is usually a
+    <code>contenteditable</code> element rather than an input, and a <code>contenteditable</code> is
+    not submitted by a form at all. Measured with <code>FormData</code>, a form holding an input, a
+    textarea and a contenteditable submits <strong>two</strong> keys, and the contenteditable
+    contributes nothing. Its text has to be read out and written into a hidden field first.</p>
+
+  <p>That hop is where a blank message fails for a reason that has nothing to do with the character.
+    The value has to survive being read as <code>innerText</code> or <code>textContent</code>, written
+    into a hidden input, and then encoded for the request. Measured on all 23, <code>innerText</code>
+    and <code>textContent</code> both keep the character and report a length of one, and the trim
+    verdict at the end of it is the same 16 of 23. What is not safe is any step that normalises or
+    strips the string on the way, and there is no way to see from the outside whether one is in the
+    path.</p>
+
+  <p>One CSS detail catches people building this themselves. The usual way to fake a placeholder in a
+    <code>contenteditable</code> is a rule on <code>:empty</code>, and <code>:empty</code> tests for
+    text nodes rather than whitespace. Measured in Chromium 153, a div holding the empty string
+    matches <code>:empty</code>, one holding a single ordinary space does <strong>not</strong>, and
+    one holding U+200B does not either. The fake placeholder vanishes on a box that will refuse to
+    send the thing that made it vanish &mdash; the same false signal as the real placeholder. The
+    limit here is the app, not the rule: nothing in this section was measured against Instagram, and a
+    platform can run the trim check and then four more on top of it.</p>
+
+  <h2>Where the advice splits</h2>
+
+  <p>Everyone agrees on the first move: a space will not do it, and an invisible character will. The
+    disagreement starts with which character. The common advice is a Hangul filler, and the reasoning
+    is sound as far as it goes &mdash; it draws nothing, it survives a trim, and it is a letter, so a
+    field that accepts letters accepts it. What the advice leaves out is the width. Measured, U+3164
+    advances a full em, and that is the one property of the character a reader can see. The position
+    that follows is the opposite of the common advice: for a blank message you want no advance at all,
+    and the fillers are the wrong end of the list.</p>
+
+  <p>The second position is that the exercise is about the wrong layer, and that the interesting
+    question is what the receiving end does with the string. On that reading a blank message is not a
+    trick that works or fails but a probe that identifies which check a platform runs. Refusing it
+    means the payload is trimmed. Accepting it means the payload is checked for emptiness alone.
+    Accepting it and then rendering a gap means nothing is normalised and advance widths are being
+    measured.</p>
+
+  <p>The third position is the minority one, and it cuts against both of the others: the character is a
+    liability in your own data, not a harmless trick in someone else's chat. The evidence is not about
+    messages. A configuration value with a leading zero-width space produced an error that named the
+    code point and nothing else, and the person who found it reported being surprised that their
+    language's own <code>strip()</code> did not remove it &mdash; the same seven-of-23 split measured
+    above, arriving as a production bug instead of a curiosity. Elsewhere the same character got past
+    an input sanitiser and threw an error naming U+200B. A character that is whitespace to nobody is
+    not stripped by anything that strips whitespace, and that cuts both ways: it is why the message
+    sends, and it is why the same character survives every cleanup step you have.</p>
+
+  <h2>What this page does not tell you</h2>
+
+  <p>Whether any particular app accepts a blank message today. What is measured here is the box, not
+    the service: the renderer's treatment of a whitespace-only string, the trim-based emptiness check
+    most send buttons implement, the ink and advance width of 23 characters, and three kinds of form
+    field in one browser. Every service layers its own rules on top and changes them without notice.</p>
+
+  <p>The set of 23 is the set measured, not a canonical list of every invisible character, and a
+    different set moves the counts without changing the direction. The ink and advance figures are
+    specific to one font stack on one platform, and a device with different font coverage can
+    substitute a glyph &mdash; which is where the box comes from, and nothing measured here predicts
+    which devices do that. Chromium 153.0.8010.12 is a single build, and the trim list is defined by
+    the Unicode version that build carries.</p>
+
+  <p class="crosslink">Measured 2026-10-04 with Chromium 153.0.8010.12 via Playwright and Node
+    22.22.2.
+    Related: <a href="/invisible-characters">the full list of invisible characters</a>,
+    <a href="/invisible-text">what a browser does with text you cannot see</a>,
+    <a href="/zero-width-space">the zero-width space remover</a>,
+    <a href="/empty-character">why there is no empty character</a>,
+    <a href="/tag-characters">tag characters, the ones that cost two units each</a>,
+    <a href="/invisible-letter">the four that are letters and print nothing</a>,
+    <a href="/invisible-username">what the same characters do in a username field</a>,
+    <a href="/hidden-characters">how to find hidden characters in a file</a>, and
+    <a href="/compare-text">comparing two texts that look identical</a>.</p>
+
+  <footer class="foot">
+    <a href="/about">About</a> &middot; <a href="/privacy">Privacy</a> &middot; <a href="/contact">Contact</a> &middot; <a href="https://github.com/f6946672/stripinvisible/blob/main/blank-text-message.html">Source</a>
+  </footer>
+</main>
+<script src="/list.js"></script>
+<!-- Cloudflare Web Analytics -->
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token":"20874485db814b21a0a76d82d7f9b4de"}'></script>
+</body>
+</html>
