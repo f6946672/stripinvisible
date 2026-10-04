@@ -103,6 +103,152 @@
     <p>This page tells you exactly that, with codepoints, so you can decide whether to strip them
       and whether to trust the cleaned version.</p>
 
+    <h2>Which engine sees it, and which one does not</h2>
+    <p>Two strings that look the same and compare as different are not a contradiction: two engines,
+      two rules. The part that catches people out is that the rule can change underneath you. The
+      same pair comes out equal on one machine and different on another, and the same file gives two
+      different counts to two tools in the same pipeline &mdash; so the number you are looking at may
+      be correct for the tool that produced it and wrong for the question you asked.</p>
+
+    <p>Take one record, <code>INV-1001 Paid</code>, and the same record with a pair of directional
+      marks wrapped around the number &mdash; U+202D before it, U+202C after it, two code points that
+      print nothing. It goes from 13 bytes to 19. Handed both versions, this is what nine engines
+      report:</p>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Engine</th>
+          <th>Verdict on the same pair</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="name"><code>==</code> in Python, <code>===</code> in JavaScript</td>
+          <td class="cp">different</td>
+        </tr>
+        <tr>
+          <td class="name">SQLite <code>=</code>, <code>COUNT(DISTINCT)</code>, <code>GROUP BY</code></td>
+          <td class="cp">different &mdash; 2 groups, with <code>COLLATE NOCASE</code> as well</td>
+        </tr>
+        <tr>
+          <td class="name"><code>cmp</code></td>
+          <td class="cp">differ: byte 1</td>
+        </tr>
+        <tr>
+          <td class="name"><code>md5sum</code></td>
+          <td class="cp">different</td>
+        </tr>
+        <tr>
+          <td class="name"><code>Intl.Collator('en').compare</code> (ICU 78.2)</td>
+          <td class="cp"><strong>0 &mdash; equal</strong></td>
+        </tr>
+        <tr>
+          <td class="name"><code>sort -u</code> with <code>LC_ALL=C</code></td>
+          <td class="cp">keeps both</td>
+        </tr>
+        <tr>
+          <td class="name"><code>sort -u</code> with <code>LC_ALL=en_US.UTF-8</code></td>
+          <td class="cp"><strong>merges them</strong></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p>The same split turns into a counting problem as soon as the strings are lines in a file. A
+      five-line log was written with the same error message three times: once clean, once wrapped in
+      U+202D and U+202C, once with a U+200B dropped inside the word <em>payments</em>, plus two
+      identical warnings:</p>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Command</th>
+          <th>Result on that file</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="name"><code>wc -l</code></td>
+          <td class="cp">5 lines, 130 bytes</td>
+        </tr>
+        <tr>
+          <td class="name"><code>sort -u | wc -l</code>, <code>LC_ALL=C</code></td>
+          <td class="cp">4</td>
+        </tr>
+        <tr>
+          <td class="name"><code>sort -u | wc -l</code>, <code>LC_ALL=en_US.UTF-8</code></td>
+          <td class="cp"><strong>3</strong></td>
+        </tr>
+        <tr>
+          <td class="name"><code>sort | uniq -c</code>, either locale</td>
+          <td class="cp">4 groups &mdash; 1, 1, 1, 2</td>
+        </tr>
+        <tr>
+          <td class="name"><code>awk '!seen[$0]++'</code></td>
+          <td class="cp">4</td>
+        </tr>
+        <tr>
+          <td class="name"><code>grep -c "payments"</code></td>
+          <td class="cp"><strong>2 of the 3</strong></td>
+        </tr>
+        <tr>
+          <td class="name"><code>cmp</code> against a clean copy</td>
+          <td class="cp">differ: byte 1, and byte 5 for the one inside the word</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p>Three copies of one error, and two tools in the same pipeline disagree about how many distinct
+      errors there are: <code>sort -u</code> says three, <code>sort | uniq</code> says four, on the
+      same file under the same locale. Neither is broken. <code>sort -u</code> compares by the
+      locale's collation rules, <code>uniq</code> compares bytes. Under <code>en_US.UTF-8</code> the
+      collation treats the directional marks as if they were not there and the wrapped line collapses
+      into the clean one; the zero-width space inside the word survives that comparison, because
+      these tables do not ignore U+200B while ICU's do. The two collation implementations disagree
+      with each other about which invisible characters count.</p>
+
+    <p>How big that set is depends on which tables you are running. Of 26 invisible code points run through
+      ICU's English collator, <strong>17</strong> compare as equal to nothing at all: the zero-width
+      space, the joiner and non-joiner, the word joiner, the byte order mark, the soft hyphen, the
+      combining grapheme joiner, the directional marks U+200E, U+200F, U+202A, U+202D, U+202C,
+      U+2066, U+2069 and U+061C, the Mongolian vowel separator, and the tag characters. Nine are not
+      ignorable: the spaces U+00A0, U+2007, U+2009, U+202F and U+3000, the line and paragraph
+      separators, and the two Hangul fillers. A merge, a join, or a unique index on a
+      collation-aware engine silently folds the first 17 into the record you already have; one built
+      on byte equality rejects all of them; and the characters that behave like spaces are rejected
+      by both.</p>
+
+    <p>Where they come from is less disputed than what to do about them. People who have lost hours
+      to this describe the same handful of sources: a certificate fingerprint copied out of a Windows
+      dialog, a name out of a word processor that carries a left-to-right mark on the end, a chat
+      client that turns tabs into non-breaking spaces inside pasted configuration files and breaks
+      the build, an input method, a paragraph out of a PDF. The disagreement is about blame. One camp
+      says the application that inserted the character is at fault. The other, smaller and more
+      convincing, says the field should never have accepted it &mdash; the character arrived, the
+      record was stored, and every lookup afterwards failed for a reason nobody could see. A third
+      report has the opposite shape: the merge failed while the spreadsheet's own comparison of the
+      same two values returned true, which is the split in the table above showing up inside one
+      product.</p>
+
+    <p>The checks people reach for first are the ones that miss. A widely-read answer to the question
+      "how do I find the difference between two strings that look identical" suggests testing with
+      <code>Contains("\u8203")</code>. The escape is read as hexadecimal, so that looks for U+8203, a
+      CJK ideograph, not for U+200B &mdash; 8203 is the <em>decimal</em> value of the zero-width
+      space. Measured: on a string with the character at position 4, the search with
+      <code>"\u8203"</code> returns -1, while <code>chr(8203)</code> finds it at 4. Length is not a
+      test either. The two records above are 15 characters against 13 and 19 bytes against 13, and in
+      the other direction one person checked the length, saw it match, concluded there were no
+      invisible characters, and spent the afternoon proving both halves of that wrong.</p>
+
+    <p>What does work, in order of cost. Compare bytes, not characters: <code>cmp</code> gives you
+      the offset of the first difference, which is the position you need, and it costs nothing to
+      run. Paste both sides into the box at the top if you want the code point named. Only then
+      decide what to delete &mdash; normalising first is worth one row of the table, because NFKC
+      folded the U+00A0 pair into a single record and left every other pair untouched. The blunt
+      fix, keep only U+0020 to U+007E, does remove the marks: on a 37-code-point line carrying two
+      directional marks, an em dash, two accented letters and a non-breaking space, it left 31 code
+      points &mdash; and took the em dash, both accents and the spacing with it.</p>
+
     <h2>Limits</h2>
     <p>Up to fifty differing positions are listed. If there are more than fifty, the page tells you
       the total and shows the first fifty. The first-difference panel always shows position 1, 2
