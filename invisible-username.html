@@ -1,0 +1,356 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Invisible Username: Why a Blank Name Still Has to Be Unique</title>
+<meta name="description" content="An invisible username is one zero-width character that is non-empty, is not whitespace and is unique — until the site normalises it. Measured: NFKC collapses 23 blank characters into 18, a normalise plus a trim erases 7 of them outright, and which of the 23 a username field accepts.">
+<link rel="canonical" href="https://stripinvisible.com/invisible-username">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://stripinvisible.com/invisible-username">
+<meta property="og:title" content="Invisible Username: Why a Blank Name Still Has to Be Unique">
+<meta property="og:description" content="A blank username passes an emptiness check, survives trim, and is unique — until the platform normalises it. Measured across 23 invisible characters: what NFKC merges, what a trim erases, and what a username field refuses.">
+<meta name="twitter:card" content="summary">
+<meta property="og:image" content="https://stripinvisible.com/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:image" content="https://stripinvisible.com/og-image.png">
+
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/styles.css">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebPage",
+      "name": "Invisible Username: Why a Blank Name Still Has to Be Unique",
+      "url": "https://stripinvisible.com/invisible-username",
+      "description": "What a username made of one invisible character has to survive: Unicode normalisation, a trim, a uniqueness comparison and a profile URL, measured across 23 characters in Chromium, Python and Node."
+    },
+    {
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "Strip Invisible", "item": "https://stripinvisible.com/" },
+        { "@type": "ListItem", "position": 2, "name": "Invisible Username" }
+      ]
+    },
+    {
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "Does an invisible username actually work?",
+          "acceptedAnswer": { "@type": "Answer", "text": "On a platform that only checks whether the field is empty and whether the string is already taken, yes. Measured in Chromium, a required username field treats a single zero-width space as filled in, and 23 different invisible characters are 23 different values. It stops working as soon as the platform normalises the string before comparing it: NFKC turns 23 distinct blank names into 18." }
+        },
+        {
+          "@type": "Question",
+          "name": "Why was my blank username rejected when the field is not required to be letters?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Because the field is not testing emptiness, it is testing a character class. Measured in Chromium, pattern [A-Za-z0-9_]+ refuses all 23 invisible characters and pattern \\w+ refuses all 23 as well, because in JavaScript \\w is ASCII. Only a field loosened to \\S+ starts letting them through, and it still refuses the seven that JavaScript counts as whitespace." }
+        },
+        {
+          "@type": "Question",
+          "name": "Why does a site say the username is taken when nobody has it?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Because your name and the existing name are one name after normalisation. Measured in Node, NFKC merges U+00A0, U+202F, U+205F and U+3000 into an ordinary space, and merges U+1160, U+3164 and U+FFA0 into U+1160. A uniqueness check running after NFKC is therefore working from a shorter list of blank names than the one you picked from." }
+        },
+        {
+          "@type": "Question",
+          "name": "Does normalising delete the invisible character?",
+          "acceptedAnswer": { "@type": "Answer", "text": "No, and neither does a trim on its own. Normalising changes some of them into other invisible characters. What erases them is the trim that usually follows: measured on all 23, exactly seven are emptied by a trim, and running the trim before normalisation or after it empties the same seven." }
+        },
+        {
+          "@type": "Question",
+          "name": "Can two accounts have the same blank username?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Yes, and a uniqueness constraint will not stop it. Measured in Node, five strings that all look empty are five distinct values and sort by code point. A database column with a unique index accepts all five, because they are not the same bytes. Only a normalising check catches the collision, and it catches it by merging names that were meant to be different." }
+        },
+        {
+          "@type": "Question",
+          "name": "Is an invisible username the same as a homoglyph attack?",
+          "acceptedAnswer": { "@type": "Answer", "text": "No, and the difference is what makes it harder to catch. A homoglyph substitutes a character that looks like another one, so a human can see the imitation. An invisible character adds nothing to look at: admin and admin followed by a zero-width space are reported as equal by localeCompare and unequal by ===, so a blocklist built on substring matching catches the imitation and a check built on exact matching lets it through." }
+        }
+      ]
+    }
+  ]
+}
+</script>
+</head>
+<body>
+<main>
+
+  <nav class="crumbs" aria-label="Breadcrumb">
+    <a href="/">Strip Invisible</a> &rsaquo; <span>Invisible Username</span>
+  </nav>
+
+  <h1>Invisible username: the name renders as nothing, and the site still has to tell it apart</h1>
+
+  <p class="lede"><strong>Short answer:</strong> an invisible username works on any platform that asks
+    only two questions &mdash; is the field non-empty, and is this string already taken &mdash; because
+    one zero-width character is not empty, is not whitespace to <code>trim()</code>, and is a different
+    value from every other blank character. It stops working the moment the platform
+    <em>normalises</em> the string before comparing it: measured across 23 invisible characters,
+    <strong>NFKC turns 23 distinct blank names into 18</strong>, and a trim after it erases
+    <strong>7 of them outright</strong>. The name you picked and the name the database stored are then
+    not the same name, which is why a blank username is less a trick and more a question about where
+    your string gets compared.</p>
+
+  <div class="tool">
+    <div class="pane">
+      <label>Characters to try in a username field</label>
+      <button class="grabbtn primary" type="button" data-cp="8203" data-label="U+200B zero width space">Copy U+200B <span class="grabcp">survives trim</span></button>
+      <button class="grabbtn" type="button" data-cp="8288" data-label="U+2060 word joiner">Copy U+2060 <span class="grabcp">no break point</span></button>
+      <button class="grabbtn" type="button" data-cp="12644" data-label="U+3164 hangul filler">Copy U+3164 <span class="grabcp">passes \p{L}</span></button>
+      <button class="grabbtn" type="button" data-cp="917536" data-label="U+E0020 tag space">Copy U+E0020 <span class="grabcp">2 units</span></button>
+      <p class="row meta">Refused by everything, for contrast:
+        <button class="grabbtn" type="button" data-cp="160" data-label="U+00A0 no-break space">Copy U+00A0 <span class="grabcp">trim eats it</span></button>
+      </p>
+    </div>
+    <div class="pane">
+      <label>What you just copied</label>
+      <p>One character. Each of the first four is non-empty, is not whitespace to
+        <code>trim()</code>, and passes a field with no character-class rule. U+3164 is the one that
+        also passes a letters-only rule, and it reserves a full 16 px cell; U+E0020 costs two UTF-16
+        units, so a three-character minimum is met by two of them. U+00A0 is the control: both
+        <code>trim()</code> and <code>\S</code> remove it, which is why the old advice to use a
+        no-break space for a blank name does not survive a measurement.</p>
+      <p class="row meta">Everything below was measured, not looked up: Chromium via Playwright for the
+        form and URL columns, Python 3.13.14 (unicodedata 15.1.0) and Node 22.22.2 (ICU 78.2,
+        Unicode 17.0) for the normalisation, trim and comparison columns.</p>
+    </div>
+  </div>
+
+  <h2>The one test a username passes that a display name never does</h2>
+
+  <p>A display name can be anything anyone else already has. A username is compared against every
+    other one before it is accepted, and something on the platform's side decides what
+    &ldquo;already taken&rdquo; means. That is the whole difference, and it is what turns a cosmetic
+    trick into a question about what happens to your string before it is compared.</p>
+
+  <p>Normalisation is where the surprise lives. It is not an exotic step &mdash; it is the standard
+    advice for any system that has to decide whether two strings are the same, and it runs before the
+    uniqueness check on most stacks that have thought about the problem at all. The characters below
+    are 23 invisible code points put through each normalisation form in turn.</p>
+
+  <div class="scroll">
+    <table>
+      <thead>
+        <tr><th>Form</th><th>Distinct blank names</th><th>What merges</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="nm">NFC</td><td class="cp">23 of 23</td><td class="cp">nothing</td></tr>
+        <tr><td class="nm">NFD</td><td class="cp">23 of 23</td><td class="cp">nothing</td></tr>
+        <tr><td class="nm">NFKC</td><td class="cp">18 of 23</td><td class="cp">U+00A0, U+202F, U+205F, U+3000 &rarr; U+0020<br>U+1160, U+3164, U+FFA0 &rarr; U+1160</td></tr>
+        <tr><td class="nm">NFKD</td><td class="cp">18 of 23</td><td class="cp">the same two groups</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>Five of the blank names you could have chosen are not five names to a uniqueness check that runs
+    after NFKC. Four of them become an ordinary space, and three of them &mdash; the two Hangul
+    fillers and the halfwidth filler &mdash; become the same Hangul filler. If you pick U+3164 and
+    somebody else already has U+1160, the check is not wrong about the collision. It is working from a
+    shorter list than the one you picked from.</p>
+
+  <h2>Trim and normalise: the order makes no difference, which is the part that feels wrong</h2>
+
+  <p>Trimming is the obvious repair, and it is the step that actually removes them. Measured on all 23
+    characters in JavaScript, <code>trim()</code> empties exactly seven: U+00A0, U+2028, U+2029,
+    U+202F, U+205F, U+3000 and U+FEFF. Run the normalisation first and then the trim, and it empties
+    the same seven. Run the trim first and then the normalisation, and it is still the same seven. The
+    order changes nothing about which blank usernames survive, which is the opposite of what you would
+    expect from two steps that each rewrite the string.</p>
+
+  <p>Python agrees on the count with one exception, and the exception is worth knowing. Python's
+    <code>strip()</code> empties six of the 23, because it does not treat U+FEFF as whitespace:
+    <code>isspace()</code> is <code>False</code> for it and <code>\s</code> does not match it. So a
+    username consisting of a single zero-width no-break space is <em>empty</em> to a browser running
+    <code>trim()</code> and <em>one character long</em> to a Python service. Validation split across a
+    browser and a server will disagree about that name, and neither side is broken.</p>
+
+  <div class="scroll">
+    <table>
+      <thead>
+        <tr><th>Step</th><th>Emptied</th><th>Which characters</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="nm">JavaScript <code>trim()</code></td><td class="cp">7 of 23</td><td class="cp">U+00A0, U+2028, U+2029, U+202F, U+205F, U+3000, U+FEFF</td></tr>
+        <tr><td class="nm">Python <code>strip()</code></td><td class="cp">6 of 23</td><td class="cp">the same list without U+FEFF</td></tr>
+        <tr><td class="nm">NFKC then trim</td><td class="cp">7 of 23</td><td class="cp">identical to the trim alone</td></tr>
+        <tr><td class="nm">trim then NFKC</td><td class="cp">7 of 23</td><td class="cp">identical again</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>Appending one to a real name beats exact matching, not substring matching</h2>
+
+  <p>The other half of the problem is a name that is not blank, but is not the name it looks like
+    either. <code>admin</code> followed by a zero-width space fails <code>===</code> against
+    <code>admin</code>, passes <code>startsWith</code> and <code>includes</code>, and is reported as
+    <strong>equal</strong> by <code>localeCompare</code>. A blocklist built on substring matching
+    catches the imitation; a check built on exact matching lets it through. Two of the most ordinary
+    ways of asking &ldquo;are these the same name&rdquo; give opposite answers about the same pair of
+    strings.</p>
+
+  <div class="scroll">
+    <table>
+      <thead>
+        <tr><th>Appended to <code>admin</code></th><th><code>===</code></th><th><code>includes</code></th><th><code>localeCompare</code></th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="nm">U+200B</td><td class="cp">false</td><td class="cp">true</td><td class="cp">0 &mdash; equal</td></tr>
+        <tr><td class="nm">U+200C</td><td class="cp">false</td><td class="cp">true</td><td class="cp">0 &mdash; equal</td></tr>
+        <tr><td class="nm">U+200D</td><td class="cp">false</td><td class="cp">true</td><td class="cp">0 &mdash; equal</td></tr>
+        <tr><td class="nm">U+2060</td><td class="cp">false</td><td class="cp">true</td><td class="cp">0 &mdash; equal</td></tr>
+        <tr><td class="nm">U+FEFF</td><td class="cp">false</td><td class="cp">true</td><td class="cp">0 &mdash; equal</td></tr>
+        <tr><td class="nm">U+00AD</td><td class="cp">false</td><td class="cp">true</td><td class="cp">0 &mdash; equal</td></tr>
+        <tr><td class="nm">U+180E</td><td class="cp">false</td><td class="cp">true</td><td class="cp">0 &mdash; equal</td></tr>
+        <tr><td class="nm">U+E0020</td><td class="cp">false</td><td class="cp">true</td><td class="cp">0 &mdash; equal</td></tr>
+        <tr><td class="nm">U+3164</td><td class="cp">false</td><td class="cp">true</td><td class="cp">not equal</td></tr>
+        <tr><td class="nm">U+FFA0</td><td class="cp">false</td><td class="cp">true</td><td class="cp">not equal</td></tr>
+        <tr><td class="nm">U+00A0</td><td class="cp">false</td><td class="cp">true</td><td class="cp">not equal</td></tr>
+        <tr><td class="nm">U+3000</td><td class="cp">false</td><td class="cp">true</td><td class="cp">not equal</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>The four at the bottom are the interesting ones, because the collator is the only thing in the
+    table that notices them. They are also the four that a trim will take off, so the pair of
+    behaviours line up: the characters a collator treats as a different name are the characters a trim
+    deletes, and the characters a collator treats as the same name are the ones that survive it.</p>
+
+  <p>Lowercasing does not help either. Many platforms fold case before the uniqueness check, and
+    measured in Node, <code>toLowerCase()</code> and <code>toUpperCase()</code> both return all of
+    these unchanged. There is no case to fold, so the step that was supposed to catch
+    &ldquo;Admin&rdquo; against &ldquo;admin&rdquo; passes a blank name straight through.</p>
+
+  <h2>In the profile URL a blank name is not blank</h2>
+
+  <p>The profile URL is where the trick stops being invisible. Parsing
+    <code>https://example.com/u/&lt;name&gt; </code> with a trailing ordinary space in Node drops the
+    space &mdash; the path comes back as <code>/u/</code> and nothing else. Every invisible character
+    is kept, and written out as percent escapes instead. A name that renders as no ink at all becomes
+    six to twelve visible characters in the address bar.</p>
+
+  <div class="scroll">
+    <table>
+      <thead>
+        <tr><th>Character</th><th>In the path</th><th>Visible characters</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="nm">ordinary space</td><td class="cp">stripped by the parser</td><td class="cp">0</td></tr>
+        <tr><td class="nm">U+00A0</td><td class="cp">%C2%A0</td><td class="cp">6</td></tr>
+        <tr><td class="nm">U+200B</td><td class="cp">%E2%80%8B</td><td class="cp">9</td></tr>
+        <tr><td class="nm">U+3164</td><td class="cp">%E3%85%A4</td><td class="cp">9</td></tr>
+        <tr><td class="nm">U+2060</td><td class="cp">%E2%81%A0</td><td class="cp">9</td></tr>
+        <tr><td class="nm">U+E0020</td><td class="cp">%F3%A0%80%A0</td><td class="cp">12</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>Two consequences follow. A link to a blank profile cannot be shortened by eye and cannot be
+    retyped from a screenshot, because what is in the address bar is not what is on the page. And the
+    name is not blank in a server log either: the request line carries the escapes, so a blank name
+    shows up in an access log as a row of percent signs where every other row has a word.</p>
+
+  <h2>What the form itself accepts</h2>
+
+  <p>Before any of that, the field has to let the character in. Measured in Chromium by putting each
+    of the 23 characters into a real <code>&lt;input&gt;</code> and reading
+    <code>validity.patternMismatch</code>, the pattern attribute is the whole gate &mdash; and the
+    pattern most username fields actually use refuses everything.</p>
+
+  <div class="scroll">
+    <table>
+      <thead>
+        <tr><th>Rule on the field</th><th>Accepts</th><th>What it lets through</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="nm"><code>pattern="[A-Za-z0-9_]+"</code></td><td class="cp">0 of 23</td><td class="cp">nothing</td></tr>
+        <tr><td class="nm"><code>pattern="\w+"</code></td><td class="cp">0 of 23</td><td class="cp">nothing &mdash; <code>\w</code> is ASCII here</td></tr>
+        <tr><td class="nm"><code>pattern="\S+"</code></td><td class="cp">16 of 23</td><td class="cp">everything except the 7 JavaScript counts as whitespace</td></tr>
+        <tr><td class="nm"><code>pattern="\p{L}+"</code></td><td class="cp">4 of 23</td><td class="cp">U+115F, U+1160, U+3164, U+FFA0</td></tr>
+        <tr><td class="nm">no pattern at all</td><td class="cp">21 of 23</td><td class="cp">everything except U+2028 and U+2029</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>The letters-only row is the one that catches people out. Loosening a rule to
+    <code>\p{L}</code> is the standard advice for accepting names in any alphabet, and it admits all
+    four Hangul fillers while continuing to refuse the zero-width space that the same advice-giver
+    would probably have expected it to block. Nothing in the middle works either: the four fillers are
+    letters, so any rule that accepts letters accepts them.</p>
+
+  <p>The length rules are worth knowing separately, because they count the wrong thing. A
+    <code>required</code> field treats a single invisible character as filled in &mdash; measured, all
+    23 of 23, including the ones whose <code>trim()</code> length is zero &mdash; while an empty
+    string fails. And <code>minlength</code> counts UTF-16 units rather than characters: typed into a
+    field with a minimum of three, two zero-width spaces measure 2 and are rejected as too short,
+    while two tag characters measure 4 and pass, even though both are two keystrokes and neither shows
+    anything. At a maximum of five the same asymmetry appears from the other side: five zero-width
+    spaces fit, and only two tag characters do.</p>
+
+  <h2>Where the advice splits</h2>
+
+  <p>Everybody who has worked on this agrees on the first move: normalise the string before you
+    compare it, and do it in one place. The standard illustration is a music service in 2013, where
+    two usernames that were different at the Unicode level normalised into the same form and one
+    account could take over the other. The measured table above is that incident in miniature &mdash;
+    five distinct inputs, two normalised outputs.</p>
+
+  <p>The second position is that normalisation is being applied at the wrong moment rather than in the
+    wrong way. On that reading the check that stops somebody registering both
+    <code>admin</code> and <code>Admin</code> only has to run once, when the account is created; at
+    login the server should not accept <code>Admin</code> as a valid way to reach the account
+    <code>admin</code> at all. If you take that seriously, a blank username stops being a Unicode
+    problem and becomes a decision about when the comparison happens &mdash; and the measurements here
+    say the two moments need different rules, because the same string is a collision at signup and a
+    login failure afterwards.</p>
+
+  <p>The third position is the minority one, and it comes in two directions that both cut against the
+    other two. One argument is that the real risk is the dependency rather than the character: a
+    platform that accepts Unicode usernames has to pull a large Unicode library into the
+    authentication path, which is a lot of surface area for a name. The other is that restricting
+    usernames to ASCII is not the safe option either, because a name is a string that gets displayed
+    and stored, and you do not want a bell or a null in it any more than you want a zero-width space.
+    Neither side of that argument is settled by anything measured on this page. What the measurements
+    do say is that the characters which survive every gate are the ones nobody thought to list: the
+    four Hangul fillers pass a letters-only rule, and the two rules that catch them &mdash;
+    <code>trim()</code> and a collator &mdash; are the two most people would not think to run on a
+    username at all.</p>
+
+  <h2>What this page does not tell you</h2>
+
+  <p>Whether any particular platform accepts these. What is measured here is the rules &mdash; the
+    Unicode normalisation forms, the HTML constraint API in Chromium, and the behaviour of two
+    language runtimes. Individual services layer their own checks on top, and several reject blank
+    names outright for reasons that have nothing to do with Unicode. A platform that runs none of the
+    steps in the tables above will take a blank username; a platform that runs all of them will not,
+    and neither outcome says anything about the other.</p>
+
+  <p>The set of 23 is also the set measured, not a canonical list of every invisible character.
+    A different set moves the counts, though not the direction of any result: more characters mean
+    more merges under NFKC and more survivors of a trim. The runtimes are single builds as well &mdash;
+    Python 3.13.14 carries Unicode 15.1.0 and Node 22.22.2 carries Unicode 17.0, and a platform on a
+    third version could normalise a code point differently from both. Categories, byte counts and the
+    <code>===</code> verdicts will hold anywhere; the exact merge list is a measurement of these two
+    versions.</p>
+
+  <p class="crosslink">Measured 2026-10-04 with Chromium via Playwright, Python 3.13.14
+    (unicodedata 15.1.0) and Node 22.22.2 (ICU 78.2, Unicode 17.0).
+    Related: <a href="/invisible-characters">the full list of invisible characters</a>,
+    <a href="/invisible-letter">the four that are letters and print nothing</a>,
+    <a href="/empty-character">why there is no empty character</a>,
+    <a href="/hidden-characters">how to find hidden characters in a file</a>,
+    <a href="/compare-text">comparing two texts that look identical</a>,
+    <a href="/invisible-text">what a browser does with characters you cannot see</a>,
+    <a href="/tag-characters">tag characters that hide a whole ASCII message</a>, and
+    <a href="/zero-width-space">the zero-width space remover</a>.</p>
+
+  <footer class="foot">
+    <a href="/about">About</a> &middot; <a href="/privacy">Privacy</a> &middot; <a href="/contact">Contact</a> &middot; <a href="https://github.com/f6946672/stripinvisible/blob/main/invisible-username.html">Source</a>
+  </footer>
+</main>
+<script src="/list.js"></script>
+<!-- Cloudflare Web Analytics -->
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token":"20874485db814b21a0a76d82d7f9b4de"}'></script>
+</body>
+</html>
