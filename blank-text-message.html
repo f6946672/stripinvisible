@@ -325,6 +325,32 @@
     limit here is the app, not the rule: nothing in this section was measured against Instagram, and a
     platform can run the trim check and then four more on top of it.</p>
 
+  <h2 id="blank-message-for-whatsapp">Blank message for WhatsApp: the link is the extra step</h2>
+
+  <p>WhatsApp takes the same two gates as everything else on this page, and it adds one more place
+    the character can be lost before a box is involved at all: the share link. WhatsApp publishes a
+    click-to-chat URL that carries the message text as a query parameter, and that parameter is where
+    the character has to survive an encoder first. Measured across all 23 candidates, every one of
+    them comes back out of a parsed URL unchanged and leaves the <code>text</code> parameter
+    non-empty &mdash; a link carrying nothing but an invisible character is not a link with an empty
+    message in it.</p>
+
+  <p>The encoding does not make the 23 equal, though. They produce 23 distinct percent-encoded forms
+    in three lengths: six characters for the two-byte ones (U+00A0, U+00AD, U+034F, U+061C), nine for
+    the three-byte ones including U+200B, U+2060 and U+FEFF, and twelve for the four-byte tag
+    characters. <code>encodeURIComponent</code> and <code>URLSearchParams</code> agree on all 23
+    &mdash; which is not true of every character in Unicode. An ordinary space is <code>%20</code>
+    through the first and <code>+</code> through the second, which is why a link written by hand and
+    a link built in code do not always carry the same string.</p>
+
+  <p>What still decides it is the trim check, and the split is the same seven of 23 measured above: a
+    link carrying U+00A0, U+2028, U+2029, U+202F, U+205F, U+3000 or U+FEFF arrives as a non-empty
+    parameter and is still the kind of character a trim is allowed to remove. The limit here is the
+    same as in the section above, and it is worth stating again: nothing in this section was measured
+    against WhatsApp. The encoding is the only part of it that runs outside the app, and a platform
+    that trims the parameter, normalises it or replaces it with a placeholder will beat every number
+    above.</p>
+
   <h2>Where the advice splits</h2>
 
   <p>Everyone agrees on the first move: a space will not do it, and an invisible character will. The
