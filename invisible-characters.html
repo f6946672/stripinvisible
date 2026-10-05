@@ -52,7 +52,7 @@
           "name": "What is an invisible character?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "A Unicode character in the general category Cf (format) that takes a position in a string and draws nothing. Unicode 15.1 assigns 170 of them. Measured in Chromium 153 at 16px system-ui, 128 have an advance width of exactly 0.00 px."
+            "text": "A Unicode character in the general category Cf (format) that takes a position in a string and draws nothing. Unicode 15.1 assigns 170 of them. Measured in Chromium 153 at 16px, 136 of the 170 have an advance width of exactly 0.00 px."
           }
         },
         {
@@ -60,7 +60,7 @@
           "name": "How many invisible characters are there?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "Unicode 15.1 assigns 170 format characters (category Cf), in 21 contiguous ranges. Measured in Chromium 153, 128 render with zero advance width, 8 measure under 0.35 px, and 34 draw a visible glyph from 9.41 px to 24.81 px wide."
+            "text": "Unicode 15.1 assigns 170 format characters (category Cf), in 21 contiguous ranges. Measured in Chromium 153 at 16px, 136 of the 170 render with zero advance width and 34 draw a visible glyph between 9 px and 25 px wide."
           }
         },
         {
@@ -68,7 +68,7 @@
           "name": "Can an invisible character break an email field?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "Chromium's built-in email validation rejects all 128 zero-width format characters in the local part of an address. Common hand-written regexes do not: a pattern built on [^\\s@]+ accepts U+200B in the local part, and only rejects U+FEFF."
+            "text": "Chromium's built-in email validation rejects all 136 zero-width format characters in the local part of an address. Common hand-written regexes do not: a pattern built on [^\\s@]+ accepts U+200B in the local part, and only rejects U+FEFF."
           }
         },
         {
@@ -76,7 +76,7 @@
           "name": "Does a required field accept an invisible character?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "Yes. Measured in Chromium 153, a text input with the required attribute passes checkValidity() when its value is a single zero-width character, for all 128 zero-width format characters tested. An empty string is the only thing that fails."
+            "text": "Yes. Measured in Chromium 153, a text input with the required attribute passes checkValidity() when its value is a single zero-width character, for all 136 zero-width format characters tested. An empty string is the only thing that fails."
           }
         },
         {
@@ -433,10 +433,10 @@
   <p class="lede"><strong>Short answer:</strong> an invisible character is a Unicode <em>format</em>
     character &mdash; general category <code>Cf</code> &mdash; that holds a position in your string
     and draws nothing on screen. Unicode 15.1 assigns <strong>170</strong> of them. Measured in
-    Chromium 153 at 16px system-ui, <strong>128 render at exactly 0.00 px</strong>, 8 more measure
-    under 0.35 px, and 34 draw a real glyph between 9.41 px and 24.81 px wide. The one you almost
+    Chromium 153 at 16px, <strong>136 render at exactly 0.00 px</strong> and the other
+    <strong>34 advance 9 px to 25 px</strong>. The one you almost
     certainly have is <strong>U+200B ZERO WIDTH SPACE</strong>: 3 bytes, 1 character, invisible,
-    survives copy and paste. On a form, measured: <strong>Chromium rejects every one of the 128</strong>
+    survives copy and paste. On a form, measured: <strong>Chromium rejects every one of the 136</strong>
     inside an email field, while <strong>a field holding only one still counts as filled</strong>
     for <code>required</code>, and five of them are enough to fill a <code>maxlength="5"</code>
     input that looks completely empty.</p>
@@ -470,7 +470,9 @@
     characters in 21 ranges</strong>, next to 65 control characters (<code>Cc</code>), 17 spaces
     (<code>Zs</code>) and one each of line and paragraph separator. Then each of the 170 was
     measured in Chromium 153 by rendering <code>|X|</code> and subtracting the width of
-    <code>||</code>:</p>
+    <code>||</code> &mdash; twenty-four configurations in all: three font stacks, four font
+    sizes and two device scale factors. The table is the 16 px run, where 136 of the 170
+    advance 0.00 px:</p>
 
   <div class="scroll">
     <table>
@@ -478,29 +480,31 @@
         <tr><th>Codepoint range</th><th>Count</th><th>Measured advance width</th></tr>
       </thead>
       <tbody>
-        <tr><td class="cp">U+200B&ndash;U+200F</td><td class="cp">5</td><td class="name">0.00 px (U+200C, U+200F: 0.02 px)</td></tr>
-        <tr><td class="cp">U+202A&ndash;U+202E</td><td class="cp">5</td><td class="name">0.00 px (U+202B, U+202E: 0.02 px)</td></tr>
+        <tr><td class="cp">U+200B&ndash;U+200F</td><td class="cp">5</td><td class="name">0.00 px</td></tr>
+        <tr><td class="cp">U+202A&ndash;U+202E</td><td class="cp">5</td><td class="name">0.00 px</td></tr>
         <tr><td class="cp">U+2060&ndash;U+2064</td><td class="cp">5</td><td class="name">0.00 px</td></tr>
-        <tr><td class="cp">U+2066&ndash;U+206F</td><td class="cp">10</td><td class="name">0.00 px (U+2067: 0.02 px)</td></tr>
+        <tr><td class="cp">U+2066&ndash;U+206F</td><td class="cp">10</td><td class="name">0.00 px</td></tr>
         <tr><td class="cp">U+E0020&ndash;U+E007F</td><td class="cp">96</td><td class="name">0.00 px</td></tr>
         <tr><td class="cp">U+1D173&ndash;U+1D17A</td><td class="cp">8</td><td class="name">0.00 px</td></tr>
         <tr><td class="cp">U+E0001</td><td class="cp">1</td><td class="name">0.00 px</td></tr>
         <tr><td class="cp">U+FEFF</td><td class="cp">1</td><td class="name">0.00 px</td></tr>
         <tr><td class="cp">U+00AD</td><td class="cp">1</td><td class="name">0.00 px</td></tr>
         <tr><td class="cp">U+180E</td><td class="cp">1</td><td class="name">0.00 px</td></tr>
-        <tr><td class="cp">U+061C</td><td class="cp">1</td><td class="name">0.02 px &mdash; sub-pixel, still nothing to see</td></tr>
-        <tr><td class="cp">U+070F</td><td class="cp">1</td><td class="name">0.34 px &mdash; sub-pixel</td></tr>
-        <tr><td class="cp">U+0600&ndash;U+0605</td><td class="cp">6</td><td class="name"><strong>visible</strong>, 9.41&ndash;24.81 px (Arabic number and verse marks)</td></tr>
-        <tr><td class="cp">U+06DD, U+0890&ndash;U+0891, U+08E2</td><td class="cp">4</td><td class="name"><strong>visible</strong>, 11.17&ndash;17.98 px</td></tr>
-        <tr><td class="cp">U+FFF9&ndash;U+FFFB</td><td class="cp">3</td><td class="name"><strong>visible</strong>, 11.16 px (interlinear annotation)</td></tr>
-        <tr><td class="cp">U+110BD, U+110CD</td><td class="cp">2</td><td class="name"><strong>visible</strong>, 10.41 px (Kaithi number signs)</td></tr>
-        <tr><td class="cp">U+13430&ndash;U+1343F</td><td class="cp">16</td><td class="name"><strong>visible</strong>, 9.72&ndash;11.16 px (Egyptian hieroglyph format)</td></tr>
-        <tr><td class="cp">U+1BCA0&ndash;U+1BCA3</td><td class="cp">4</td><td class="name"><strong>visible</strong>, 18.06 px (shorthand format)</td></tr>
+        <tr><td class="cp">U+061C</td><td class="cp">1</td><td class="name">0.00 px</td></tr>
+        <tr><td class="cp">U+070F</td><td class="cp">1</td><td class="name">0.00 px &mdash; draws a glyph</td></tr>
+        <tr><td class="cp">U+0600&ndash;U+0604</td><td class="cp">5</td><td class="name"><strong>visible</strong>, 9&ndash;25 px (Arabic number and verse marks)</td></tr>
+        <tr><td class="cp">U+0605</td><td class="cp">1</td><td class="name">draws a glyph, advances 0.00 px</td></tr>
+        <tr><td class="cp">U+06DD, U+0890&ndash;U+0891, U+08E2</td><td class="cp">4</td><td class="name"><strong>visible</strong>, 9&ndash;18 px</td></tr>
+        <tr><td class="cp">U+FFF9&ndash;U+FFFB</td><td class="cp">3</td><td class="name"><strong>visible</strong>, 11 px (interlinear annotation)</td></tr>
+        <tr><td class="cp">U+110BD, U+110CD</td><td class="cp">2</td><td class="name"><strong>visible</strong>, 10 px (Kaithi number signs)</td></tr>
+        <tr><td class="cp">U+13430&ndash;U+1343F</td><td class="cp">16</td><td class="name"><strong>visible</strong>, 10&ndash;11 px (Egyptian hieroglyph format)</td></tr>
+        <tr><td class="cp">U+1BCA0&ndash;U+1BCA3</td><td class="cp">4</td><td class="name"><strong>visible</strong>, 18 px (shorthand format)</td></tr>
       </tbody>
     </table>
   </div>
-  <p>For scale, a letter <code>A</code> measures 11.27 px in the same run, so the 34 visible ones are
-    not marginal &mdash; a few are wider than two letters. Being in category <code>Cf</code> does
+  <p>For scale, the widest of the 34 is 25 px &mdash; more than twice an ordinary capital letter
+    measured in the same run &mdash; so the visible ones are not marginal. Being in category
+    <code>Cf</code> does
     <em>not</em> guarantee you cannot see it.</p>
 
   <h2>Eight of them, measured end to end</h2>
@@ -515,7 +519,7 @@
       </thead>
       <tbody>
         <tr><td class="cp">U+200B</td><td class="name">ZERO WIDTH SPACE</td><td class="cp">0.00 px</td><td>kept</td><td>no</td><td>kept</td><td class="cp">3 B</td><td class="cp">%E2%80%8B</td></tr>
-        <tr><td class="cp">U+200C</td><td class="name">ZERO WIDTH NON-JOINER</td><td class="cp">0.02 px</td><td>kept</td><td>no</td><td>kept</td><td class="cp">3 B</td><td class="cp">%E2%80%8C</td></tr>
+        <tr><td class="cp">U+200C</td><td class="name">ZERO WIDTH NON-JOINER</td><td class="cp">0.00 px</td><td>kept</td><td>no</td><td>kept</td><td class="cp">3 B</td><td class="cp">%E2%80%8C</td></tr>
         <tr><td class="cp">U+200D</td><td class="name">ZERO WIDTH JOINER</td><td class="cp">0.00 px</td><td>kept</td><td>no</td><td>kept</td><td class="cp">3 B</td><td class="cp">%E2%80%8D</td></tr>
         <tr><td class="cp">U+2060</td><td class="name">WORD JOINER</td><td class="cp">0.00 px</td><td>kept</td><td>no</td><td>kept</td><td class="cp">3 B</td><td class="cp">%E2%81%A0</td></tr>
         <tr><td class="cp">U+FEFF</td><td class="name">ZERO WIDTH NO-BREAK SPACE</td><td class="cp">0.00 px</td><td><strong>removed</strong></td><td><strong>yes</strong></td><td>kept</td><td class="cp">3 B</td><td class="cp">%EF%BB%BF</td></tr>
@@ -546,7 +550,7 @@
       <tbody>
         <tr>
           <td class="name"><code>&lt;input type="email"&gt;</code> with the character in the local part</td>
-          <td><strong>Rejected, 128 out of 128.</strong> Zero of the zero-width format characters are accepted. Chromium's message names the character: <em>"A part followed by '@' should not contain the symbol '&nbsp;'."</em></td>
+          <td><strong>Rejected, 136 out of 136.</strong> Zero of the zero-width format characters are accepted. Chromium's message names the character: <em>"A part followed by '@' should not contain the symbol '&nbsp;'."</em></td>
         </tr>
         <tr>
           <td class="name">Regex <code>/^[^\s@]+@[^\s@]+\.[^\s@]+$/</code></td>
@@ -562,7 +566,7 @@
         </tr>
         <tr>
           <td class="name"><code>required</code> text input holding only that character</td>
-          <td><strong>Passes as filled, 128 out of 128.</strong> An empty string is the only value that fails the check.</td>
+          <td><strong>Passes as filled, 136 out of 136.</strong> An empty string is the only value that fails the check.</td>
         </tr>
         <tr>
           <td class="name"><code>maxlength="5"</code>, typing the character 12 times</td>
@@ -628,8 +632,11 @@ clean = ''.join(ch for ch in text if ch.isprintable())</code></pre>
   <p>These measurements describe how invisible characters behave. They say nothing about who put one
     there or why, and finding one is not evidence that a text was generated by a model &mdash; rich
     text editors, document exports and web pages all produce them too. The width and validation
-    numbers are from one browser build and one font stack; a different font can move the sub-pixel
-    rows, though not the 0.00 px ones. Every count here came from Unicode 15.1 and Chromium 153, so
+    numbers are from one browser build, swept across twenty-four configurations. How many advance
+    0.00 px is a fact about the size: 136 at 16 px, 135 at 32 px and above, the same in every
+    font stack tested. This build rounds each glyph advance to a whole pixel, so anything below
+    one pixel is below what the measurement can show. Every count came from Unicode 15.1 and
+    Chromium 153, so
     re-run the snippets on your own stack before you rely on a specific number.</p>
 
   <p class="crosslink">Measured 2026-09-23 with Python 3.13.14 (unicodedata 15.1.0), Node 22.22.2 and
