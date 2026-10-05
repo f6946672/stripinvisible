@@ -110,9 +110,128 @@
     <p>When you clean a document you are about to submit, the worry is not whether it removed
       something &mdash; it is whether it removed something you wanted. So this page reports the word
       count and the character count before and after.</p>
-    <p>Removing invisible characters should never change the word count, because none of them are
-      word characters. If the word count moves, something is wrong and you should not use the
-      result. That is the whole point of showing it.</p>
+    <p>Removing invisible characters should not change the word count, because none of them are
+      word characters &mdash; with one exception that is worth knowing before you trust the number.
+      <code>U+FEFF</code> is the only invisible character JavaScript treats as whitespace, so
+      deleting it joins the two words sitting on either side of it and the count genuinely drops.
+      That is the one case where a lower number is expected rather than alarming. If the count
+      moves for any other reason, something is wrong and you should not use the result. That is the
+      whole point of showing it.</p>
+
+    <h2>The one invisible character that makes text wider</h2>
+
+    <p>Everything this page removes is invisible, but not all of it is invisible in the same way.
+      Most of it takes up no room at all. <strong>U+3000 IDEOGRAPHIC SPACE works the other way
+      round</strong>: measured in Chromium at a 16&nbsp;px system font it advances
+      <strong>16.00&nbsp;px</strong>, a full em, against <strong>4.73&nbsp;px</strong> for an
+      ordinary space. One of them is worth about three and a half normal spaces, and it still puts
+      no ink on the page.</p>
+
+    <div class="scroll">
+      <table>
+        <thead>
+          <tr><th>Character</th><th>Advance width at 16&nbsp;px</th></tr>
+        </thead>
+        <tbody>
+          <tr><td class="nm">Ordinary space <code>U+0020</code></td><td class="cp">4.73&nbsp;px</td></tr>
+          <tr><td class="nm">No-break space <code>U+00A0</code></td><td class="cp">4.73&nbsp;px</td></tr>
+          <tr><td class="nm">Thin space <code>U+2009</code></td><td class="cp">3.20&nbsp;px</td></tr>
+          <tr><td class="nm">Narrow no-break space <code>U+202F</code></td><td class="cp">2.38&nbsp;px</td></tr>
+          <tr><td class="nm">Medium mathematical space <code>U+205F</code></td><td class="cp">3.56&nbsp;px</td></tr>
+          <tr><td class="nm"><strong>Ideographic space <code>U+3000</code></strong></td><td class="cp"><strong>16.00&nbsp;px</strong></td></tr>
+          <tr><td class="nm">Capital letter A, for scale</td><td class="cp">11.27&nbsp;px</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>That width is the character&rsquo;s purpose: it is a space the size of one full-width
+      character cell. It reaches a document two ways. An East-Asian input method produces it from
+      the space bar, so it arrives without anyone deciding to type it. It is also typed on purpose
+      instead of a tab, because it is exactly one cell wide and therefore looks like a reliable way
+      to indent a line &mdash; a habit that shows up in documents with strict formatting rules,
+      where the fix is reformatting rather than cleaning.</p>
+
+    <p>Once it is in the text it behaves like a space and not like the other invisible characters.
+      Put a 15-word sentence in a 420&nbsp;px box: with ordinary spaces it lays out as
+      <strong>3 lines</strong>, with U+3000 between the words also <strong>3 lines</strong>, and
+      with <code>U+00A0</code> between them it is <strong>1 line</strong> that runs off the edge
+      and never breaks. Delete the separators outright instead of replacing them and you get the
+      same result as the no-break space: one unbreakable line. So the normal advice holds here
+      &mdash; swap it for an ordinary space, do not remove it.</p>
+
+    <h2>Four tools, four answers to &ldquo;how many words&rdquo;</h2>
+
+    <p>Take five words joined by four copies of one separator, and ask everything on the machine
+      how many words that is. A plain space gives five everywhere. Nothing else does.</p>
+
+    <div class="scroll">
+      <table>
+        <thead>
+          <tr><th>Separator</th><th>This page&rsquo;s counter</th><th>Unicode word segmentation</th><th><code>wc -w</code>, UTF-8 locale</th><th><code>awk</code> fields</th><th><code>diff -w</code> ignores it</th></tr>
+        </thead>
+        <tbody>
+          <tr><td class="nm">Ordinary space <code>U+0020</code></td><td class="cp">5</td><td class="cp">5</td><td class="cp">5</td><td class="cp">5</td><td class="nm">baseline</td></tr>
+          <tr><td class="nm">No-break space <code>U+00A0</code></td><td class="cp">5</td><td class="cp">5</td><td class="cp">5</td><td class="cp">1</td><td class="nm">no</td></tr>
+          <tr><td class="nm">Thin space <code>U+2009</code></td><td class="cp">5</td><td class="cp">5</td><td class="cp">5</td><td class="cp">1</td><td class="nm">yes</td></tr>
+          <tr><td class="nm">Narrow no-break space <code>U+202F</code></td><td class="cp">5</td><td class="cp"><strong>1</strong></td><td class="cp">5</td><td class="cp">1</td><td class="nm">no</td></tr>
+          <tr><td class="nm">Medium mathematical space <code>U+205F</code></td><td class="cp">5</td><td class="cp">5</td><td class="cp">5</td><td class="cp">1</td><td class="nm">yes</td></tr>
+          <tr><td class="nm">Ideographic space <code>U+3000</code></td><td class="cp">5</td><td class="cp">5</td><td class="cp">5</td><td class="cp">1</td><td class="nm">yes</td></tr>
+          <tr><td class="nm">Zero width space <code>U+200B</code></td><td class="cp"><strong>1</strong></td><td class="cp"><strong>5</strong></td><td class="cp">1</td><td class="cp">1</td><td class="nm">no</td></tr>
+          <tr><td class="nm">Zero width no-break space <code>U+FEFF</code></td><td class="cp">5</td><td class="cp"><strong>1</strong></td><td class="cp">1</td><td class="cp">1</td><td class="nm">no</td></tr>
+          <tr><td class="nm">Line separator <code>U+2028</code></td><td class="cp">5</td><td class="cp">5</td><td class="cp">5</td><td class="cp">1</td><td class="nm">yes</td></tr>
+          <tr><td class="nm">Soft hyphen <code>U+00AD</code></td><td class="cp">1</td><td class="cp">1</td><td class="cp">1</td><td class="cp">1</td><td class="nm">no</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>The first two columns are both this browser, asked in two different ways. The counter above
+      splits on whitespace; Unicode word segmentation follows the word boundary rules instead, and
+      the two disagree in <em>both</em> directions. <code>U+202F</code> and <code>U+FEFF</code> are
+      boundaries for one and not the other. <code>U+200B</code> is the reverse: five words to the
+      segmentation rules, one word to the counter. &ldquo;The word count did not move&rdquo; is
+      therefore a statement about one particular counter, not about the text.</p>
+
+    <p>That matters because of what the cleaner actually does. It removes
+      <code>U+FEFF</code> with every option switched off, and since JavaScript counts
+      <code>U+FEFF</code> as whitespace, five words joined by it are five words before cleaning and
+      <strong>one</strong> word afterwards. The counter on this page will show
+      <code>5 &rarr; 1</code> and raise its warning, and it is right to: nothing you could see was
+      lost, but <em>alpha beta gamma delta epsilon</em> has become
+      <em>alphabetagammadeltaepsilon</em>. If a word count is going to be checked downstream,
+      normalise instead of deleting.</p>
+
+    <p>The shell is worse. <code>wc -w</code> counts a no-break space as a word separator in a
+      UTF-8 locale and not in the C locale &mdash; two words for <code>a</code>&nbsp;+&nbsp;<code>U+00A0</code>&nbsp;+&nbsp;<code>b</code>
+      under one, one word under the other &mdash; and in that same UTF-8 locale
+      <code>awk</code> still reports a single field. The two disagree because
+      <code>wc</code> carries its own list of non-breaking spaces rather than relying on the C
+      library&rsquo;s wide-character whitespace test, which by design does not count a no-break
+      space as a space. Several people have run into this while writing a word counter and come
+      away with the same conclusion: the character class is locale-dependent, and it is not the
+      same class the other utilities use.</p>
+
+    <p><code>diff -w</code> is a third answer. It ignores <code>U+3000</code>,
+      <code>U+2009</code>, <code>U+205F</code> and <code>U+2028</code> but not
+      <code>U+00A0</code> or <code>U+202F</code>, so &ldquo;ignore all whitespace&rdquo; means a
+      different set of characters than &ldquo;count words&rdquo; does. Under the C locale it
+      ignores none of them. That also explains the widely repeated complaint that
+      <code>diff -w</code> will not ignore a full-width space: it is true in some locales and false
+      in others, and nobody writing it down mentioned which one they were in.</p>
+
+    <p>Two practical consequences. First, normalisation is the safe move: NFKC turns
+      <code>U+00A0</code>, <code>U+2009</code>, <code>U+202F</code>, <code>U+205F</code> and
+      <code>U+3000</code> into an ordinary space, and leaves <code>U+200B</code>,
+      <code>U+FEFF</code>, <code>U+00AD</code> and <code>U+2028</code> exactly as they were, so it
+      fixes the spaces without touching the characters that are doing structural work. Second, do
+      not build a whitelist from a constant. Python&rsquo;s <code>string.whitespace</code> is seven
+      ASCII characters and contains none of these; <code>str.split()</code> and
+      <code>re</code> both handle <code>U+3000</code> correctly, so the gap is in the constant, not
+      in the functions.</p>
+
+    <p>One last thing worth knowing before you paste an example anywhere: some sites quietly rewrite
+      <code>U+3000</code> into an ordinary space when you post it. A demonstration typed into a
+      comment box can come back looking completely normal, which is exactly how a character this
+      wide stays invisible for so long.</p>
 
     <h2>Paste without formatting does not help</h2>
     <p>The first thing everyone tries is <em>Paste without formatting</em>

@@ -18,6 +18,19 @@
     return t.split(' ').length;
   }
 
+  /* Unicode word boundaries (UAX #29) - a second, independent definition of "word". */
+  function wordsBySegmentation(s) {
+    try {
+      if (typeof Intl === 'undefined' || typeof Intl.Segmenter !== 'function') return null;
+      var parts = Array.from(new Intl.Segmenter(undefined, { granularity: 'word' }).segment(s));
+      var n = 0;
+      for (var i = 0; i < parts.length; i++) if (parts[i].isWordLike) n++;
+      return n;
+    } catch (e) {
+      return null;
+    }
+  }
+
   function updateCount() {
     var n = Array.from(input.value).length;
     var w = wordsIn(input.value);
@@ -51,11 +64,19 @@
     countsEl.hidden = false;
     var wordOk = wBefore === wAfter;
     countsEl.className = 'jsonstatus ' + (wordOk ? 'ok' : 'bad');
-    countsEl.innerHTML =
+    var html =
       '<strong>Words: ' + wBefore + ' &rarr; ' + wAfter +
       (wordOk ? ' &middot; unchanged' : ' &middot; CHANGED — investigate') + '</strong>' +
       '<span>Characters: ' + cBefore + ' &rarr; ' + cAfter +
       ' (' + (cBefore - cAfter) + ' removed)</span>';
+
+    var sBefore = wordsBySegmentation(before);
+    var sAfter = wordsBySegmentation(after);
+    if (sBefore !== null) {
+      html += '<span>Unicode word boundaries: ' + sBefore + ' &rarr; ' + sAfter +
+        (sBefore === sAfter ? ' &middot; unchanged' : ' &middot; CHANGED') + '</span>';
+    }
+    countsEl.innerHTML = html;
   }
 
   function renderReport(res) {
