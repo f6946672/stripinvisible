@@ -634,8 +634,8 @@ clean = ''.join(ch for ch in text if ch.isprintable())</code></pre>
     text editors, document exports and web pages all produce them too. The width and validation
     numbers are from one browser build, swept across twenty-four configurations. How many advance
     0.00 px is a fact about the size: 136 at 16 px, 135 at 32 px and above, the same in every
-    font stack tested. This build rounds each glyph advance to a whole pixel, so anything below
-    one pixel is below what the measurement can show. Every count came from Unicode 15.1 and
+    font stack tested. At 16 px this build rounds each glyph advance to the nearest whole pixel, so
+    every figure in the table is a whole number. Every count came from Unicode 15.1 and
     Chromium 153, so
     re-run the snippets on your own stack before you rely on a specific number.</p>
 
