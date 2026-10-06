@@ -79,6 +79,10 @@
           <input type="checkbox" id="jspaces">
           <span>Normalize exotic spaces (NBSP, thin, hair, figure)</span>
         </label>
+        <label class="opt check">
+          <input type="checkbox" id="jescape">
+          <span>Escape non-ASCII as \uXXXX &mdash; the way Python writes it by default</span>
+        </label>
         <p class="warn">Aggressive mode rewrites emoji and right-to-left runs. For JSON payloads you usually want it off unless the text is prose.</p>
       </fieldset>
 
@@ -97,6 +101,7 @@
         <button id="jdownload" type="button">Download .json</button>
         <span id="jcopied" class="copied" hidden>Copied</span>
       </div>
+      <p class="hint" id="jbytes"></p>
 
       <div id="jvalid"></div>
       <div id="report"></div>
@@ -131,6 +136,90 @@
     <p>Text copied out of a chat window or a web page can carry <code>U+E0020</code>&ndash;<code>U+E007F</code>
       tag characters or private use codepoints. They are valid in a JSON string, so nothing complains,
       and they travel with the data into whatever consumes it.</p>
+
+    <h2>What writing the JSON does to them</h2>
+    <p>Every invisible code point in this page's list is legal, unescaped, inside a JSON string, and
+      every conforming parser hands it back unchanged &mdash; all twenty-three survive a round trip
+      through <code>JSON.parse</code> and <code>json.loads</code> as the same code point. The trouble
+      is not in the reading. It is in what the file looks like afterwards, and that depends entirely
+      on which program wrote it.</p>
+
+    <h3>Two writers, two different files</h3>
+    <p><code>JSON.stringify</code> escapes none of them: zero of twenty-three, all of them written as
+      raw bytes. Python's <code>json.dumps</code> at its default escapes all twenty-three, so a zero
+      width space leaves as the six characters <code>\u200b</code>. Add <code>ensure_ascii=False</code>
+      and Python writes them raw as well.</p>
+
+    <div class="scroll">
+    <table>
+      <thead><tr><th>Character</th><th><code>JSON.stringify</code></th><th><code>json.dumps</code></th><th><code>json.dumps</code>, <code>ensure_ascii=False</code></th></tr></thead>
+      <tbody>
+        <tr><td class="cp">U+200B</td><td>raw, 3 bytes</td><td><code>\u200b</code>, 6 bytes</td><td>raw, 3 bytes</td></tr>
+        <tr><td class="cp">U+200D</td><td>raw, 3 bytes</td><td><code>\u200d</code>, 6 bytes</td><td>raw, 3 bytes</td></tr>
+        <tr><td class="cp">U+FEFF</td><td>raw, 3 bytes</td><td><code>\ufeff</code>, 6 bytes</td><td>raw, 3 bytes</td></tr>
+        <tr><td class="cp">U+E0020</td><td>raw, 4 bytes</td><td><code>\udb40\udc20</code>, 12 bytes</td><td>raw, 4 bytes</td></tr>
+        <tr><td class="cp">U+0018</td><td><code>\u0018</code>, 6 bytes</td><td><code>\u0018</code>, 6 bytes</td><td><code>\u0018</code>, 6 bytes</td></tr>
+      </tbody>
+    </table>
+    </div>
+
+    <p>The difference is not a rounding error. A 200-key object with one zero width space in each
+      value is <strong>3,981 bytes</strong> as Node writes it and <strong>4,581 bytes</strong> as
+      Python writes it with compact separators &mdash; the 600 bytes are exactly 200 &times; 3, one
+      byte each for the backslash, the <code>u</code> and the extra hex digit. Switch
+      <code>ensure_ascii</code> off and Python lands on 3,981 too, byte for byte the same file.</p>
+
+    <p>That choice decides whether you can see the dirt. In the Python file,
+      <code>grep -c '\u200b'</code> finds it; in the Node file the same command returns nothing, and
+      searching for the raw character gives the opposite pair of answers. A file that greps clean has
+      not been cleaned &mdash; it may simply have been written by something that does not escape.</p>
+
+    <h3>The one invisible character that must be escaped</h3>
+    <p>Not everything invisible is a format character. The invisible thing that stops a JSON string
+      dead is usually a C0 control: <code>U+0018</code> sitting inside a word, <code>U+0000</code> at
+      the end of a value. Those are the only characters JSON requires you to escape, and both writers
+      do &mdash; <code>\u0018</code>, six bytes standing in for one. Parsers reject the raw versions,
+      and the two error messages point at the same spot without naming what is there:
+      <em>Bad control character in string literal in JSON at position 2 (line 1 column 3)</em> from
+      one, <em>Invalid control character at: line 1 column 3 (char 2)</em> from the other.</p>
+
+    <p>So a control character is the one invisible character that cannot hide inside valid JSON. If
+      the file parses, it has been escaped; if you can read <code>\u0018</code> in it, you have found
+      your character. The other twenty-three can sit in a file that parses perfectly and leave no
+      trace at all.</p>
+
+    <h3>U+2028 is no longer the problem, &lt;/script&gt; is</h3>
+    <p>Line separator and paragraph separator are the characters people still warn about when JSON is
+      dropped into a script block. That warning is out of date. A source file holding a raw
+      <code>U+2028</code> inside a JavaScript string literal parses cleanly in a current engine
+      (checked with <code>node --check</code>), because the language adopted JSON's string rules in
+      2019. What still breaks out of a script block is <code>&lt;/script&gt;</code>, and neither
+      writer touches it: <code>JSON.stringify</code> returns it unchanged, forward slash and all.
+      Escaping non-ASCII keeps old parsers safe and makes a stray line separator visible in a file,
+      but it does nothing for the sequence that actually ends your script.</p>
+
+    <h3>An unpaired surrogate is the only one that changes</h3>
+    <p>Half an emoji &mdash; one surrogate code unit left behind by a bad slice or a truncated read
+      &mdash; is accepted by both parsers. <code>JSON.parse</code> gives back the lone unit, and
+      Python's <code>json.loads</code> gives back a one-character string. Then they disagree. Python
+      refuses to encode it: <em>'utf-8' codec can't encode character '\ud83d' in position 0:
+      surrogates not allowed</em>. JavaScript writes it out as three bytes, <code>EF BF BD</code>,
+      which is <code>U+FFFD</code> &mdash; the same file read back in Python now holds a replacement
+      character, and whatever it originally was is gone.</p>
+
+    <p>Both writers escape it instead: <code>JSON.stringify</code> emits <code>\ud83d</code>, and
+      Python emits the same six characters. Older engines emitted the raw half, which is valid in
+      neither UTF-8 nor UTF-16 &mdash; that is what the escape rule fixed. Before a string goes
+      anywhere, <code>isWellFormed()</code> returns false on it and true on ordinary text.</p>
+
+    <h3>The byte order mark is the one thing nobody ignores</h3>
+    <p>The current specification says a parser may ignore a byte order mark rather than treat it as
+      an error. None of the ones measured here do. One reports <em>Unexpected token</em>; the other
+      reports <em>Unexpected UTF-8 BOM (decode using utf-8-sig)</em> and, usefully, names the fix.
+      Opening the file with <code>encoding='utf-8-sig'</code> reads it without a cleanup step.</p>
+
+    <p>Tick <em>Escape non-ASCII</em> in the options above and this page writes the escaped form
+      instead, then shows both byte counts, so you can see the difference on your own payload.</p>
 
     <h2>How to find them in your editor</h2>
     <p>In VS Code, open the file, press <code>Ctrl</code>+<code>F</code>, turn on the regular expression

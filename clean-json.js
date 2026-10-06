@@ -12,6 +12,56 @@
   var aggrEl = $('jaggressive');
   var spacesEl = $('jspaces');
   var copiedEl = $('jcopied');
+  var escEl = $('jescape');
+  var bytesEl = $('jbytes');
+
+  function fourHex(c) {
+    return '\\u' + ('0000' + c.toString(16)).slice(-4);
+  }
+
+  function pairEscapes(cp) {
+    var v = cp - 0x10000;
+    return fourHex(0xD800 + Math.floor(v / 0x400)) + fourHex(0xDC00 + (v % 0x400));
+  }
+
+  /* Write every non-ASCII code point as \uXXXX, the way json.dumps does at its default. */
+  function escapeNonAscii(s) {
+    var out = '';
+    for (var i = 0; i < s.length; i++) {
+      var c = s.charCodeAt(i);
+      if (c < 128) { out += s.charAt(i); continue; }
+      if (c >= 0xD800 && c <= 0xDBFF && i + 1 < s.length) {
+        var lo = s.charCodeAt(i + 1);
+        if (lo >= 0xDC00 && lo <= 0xDFFF) {
+          out += pairEscapes(0x10000 + (c - 0xD800) * 0x400 + (lo - 0xDC00));
+          i++;
+          continue;
+        }
+      }
+      out += fourHex(c);
+    }
+    return out;
+  }
+
+  function utf8len(s) {
+    if (typeof TextEncoder === 'function') return new TextEncoder().encode(s).length;
+    return unescape(encodeURIComponent(s)).length;
+  }
+
+  function fmt(n) { return n.toLocaleString('en-US'); }
+
+  function renderBytes(rawText, shown) {
+    var rawB = utf8len(rawText);
+    var shownB = utf8len(shown);
+    var msg = fmt(shownB) + ' bytes UTF-8 as shown';
+    if (shownB !== rawB) {
+      msg += ' &middot; ' + fmt(rawB) + ' bytes unescaped (+' + fmt(shownB - rawB) + ')';
+    } else {
+      var escB = utf8len(escapeNonAscii(rawText));
+      msg += ' &middot; escaped form would be ' + fmt(escB) + ' bytes (+' + fmt(escB - rawB) + ')';
+    }
+    bytesEl.innerHTML = msg;
+  }
 
   function updateCount() {
     var n = Array.from(input.value).length;
@@ -119,10 +169,15 @@
     var spaces = spacesEl.checked;
 
     var res = SI.cleanText(input.value, { aggressive: aggressive, spaces: spaces });
-    output.value = res.text;
+    output.value = escEl.checked ? escapeNonAscii(res.text) : res.text;
     renderReport(res);
     renderHighlight(aggressive, spaces);
     renderValidity(res.text);
+    renderBytes(res.text, output.value);
+  });
+
+  escEl.addEventListener('change', function () {
+    if (output.value) $('jrun').click();
   });
 
   $('jclear').addEventListener('click', function () {
@@ -133,6 +188,7 @@
     validEl.innerHTML = '';
     fileEl.value = '';
     copiedEl.hidden = true;
+    bytesEl.innerHTML = '';
     hlEl.className = 'preview empty';
     hlEl.textContent = 'Nothing scanned yet.';
     updateCount();
