@@ -71,6 +71,155 @@ json.dumps({"a": "x&#8232;y"})
     sequence. Both parse fine on the receiving end &mdash; until the payload is pasted into a
     JavaScript file instead of parsed, and the line-terminator behaviour above takes over.</p>
 
+  <h2>Ten characters that claim to end a line</h2>
+  <p>U+2028 and U+2029 are not a pair of oddities. They are two members of a set of ten, and the set
+    is the reason this is hard: no two tools agree on where it starts or stops. Sweeping every one of
+    the 1,112,064 non-surrogate code points through Python 3.13's <code>splitlines()</code> returns
+    exactly ten boundaries. Seven of them are control characters nobody thinks of as a newline.</p>
+
+  <table>
+    <thead>
+      <tr><th>Code point</th><th>Name</th><th>Bytes in UTF-8</th><th>Legal raw inside a JSON string</th></tr>
+    </thead>
+    <tbody>
+      <tr><td class="name"><code>U+000A</code></td><td class="name">Line feed</td><td class="cp">1</td><td class="cp">no &mdash; must be written <code>\n</code></td></tr>
+      <tr><td class="name"><code>U+000B</code></td><td class="name">Line tabulation</td><td class="cp">1</td><td class="cp">no &mdash; <code>\u000b</code></td></tr>
+      <tr><td class="name"><code>U+000C</code></td><td class="name">Form feed</td><td class="cp">1</td><td class="cp">no &mdash; <code>\f</code></td></tr>
+      <tr><td class="name"><code>U+000D</code></td><td class="name">Carriage return</td><td class="cp">1</td><td class="cp">no &mdash; <code>\r</code></td></tr>
+      <tr><td class="name"><code>U+001C</code></td><td class="name">File separator</td><td class="cp">1</td><td class="cp">no</td></tr>
+      <tr><td class="name"><code>U+001D</code></td><td class="name">Group separator</td><td class="cp">1</td><td class="cp">no</td></tr>
+      <tr><td class="name"><code>U+001E</code></td><td class="name">Record separator</td><td class="cp">1</td><td class="cp">no</td></tr>
+      <tr><td class="name"><code>U+0085</code></td><td class="name">Next line (NEL)</td><td class="cp">2</td><td class="cp"><strong>yes</strong></td></tr>
+      <tr><td class="name"><code>U+2028</code></td><td class="name">Line separator</td><td class="cp">3</td><td class="cp"><strong>yes</strong></td></tr>
+      <tr><td class="name"><code>U+2029</code></td><td class="name">Paragraph separator</td><td class="cp">3</td><td class="cp"><strong>yes</strong></td></tr>
+    </tbody>
+  </table>
+
+  <p>That fourth column is the one that bites. JSON only forces an escape below U+0020, so seven of
+    the ten can never appear raw in a valid JSON string &mdash; every writer escapes them, and they
+    never cause trouble. The other three sit above the escape threshold and travel as themselves.
+    <strong>U+0085 is the one nobody talks about.</strong> <code>JSON.stringify</code> leaves it raw
+    just like U+2028. <code>json.dumps</code> escapes it by default &mdash; and writes it raw the
+    moment you pass <code>ensure_ascii=False</code>, which is exactly what everyone does to get
+    readable UTF-8 output. Turning that flag off re-opens the hole for all three at once, not for
+    two.</p>
+
+  <h2>Who calls it a line break</h2>
+  <p>Same ten characters, five different opinions. Every cell below was evaluated on this machine:
+    JavaScript on Node 22.22, Python on 3.13, the shell column on a file holding three fields
+    separated by the character.</p>
+
+  <table>
+    <thead>
+      <tr><th>Code point</th><th>JS <code>\s</code></th><th>JS <code>.</code></th><th>Python <code>\s</code></th><th>Python <code>.</code></th><th>Python <code>splitlines()</code></th><th><code>wc -l</code></th></tr>
+    </thead>
+    <tbody>
+      <tr><td class="name"><code>U+000A</code></td><td class="cp">yes</td><td class="cp"><strong>no</strong></td><td class="cp">yes</td><td class="cp"><strong>no</strong></td><td class="cp">splits</td><td class="cp">2</td></tr>
+      <tr><td class="name"><code>U+000B</code></td><td class="cp">yes</td><td class="cp">yes</td><td class="cp">yes</td><td class="cp">yes</td><td class="cp">splits</td><td class="cp">0</td></tr>
+      <tr><td class="name"><code>U+000C</code></td><td class="cp">yes</td><td class="cp">yes</td><td class="cp">yes</td><td class="cp">yes</td><td class="cp">splits</td><td class="cp">0</td></tr>
+      <tr><td class="name"><code>U+000D</code></td><td class="cp">yes</td><td class="cp"><strong>no</strong></td><td class="cp">yes</td><td class="cp">yes</td><td class="cp">splits</td><td class="cp">0</td></tr>
+      <tr><td class="name"><code>U+001C</code></td><td class="cp"><strong>no</strong></td><td class="cp">yes</td><td class="cp">yes</td><td class="cp">yes</td><td class="cp">splits</td><td class="cp">0</td></tr>
+      <tr><td class="name"><code>U+001E</code></td><td class="cp"><strong>no</strong></td><td class="cp">yes</td><td class="cp">yes</td><td class="cp">yes</td><td class="cp">splits</td><td class="cp">0</td></tr>
+      <tr><td class="name"><code>U+001F</code></td><td class="cp"><strong>no</strong></td><td class="cp">yes</td><td class="cp">yes</td><td class="cp">yes</td><td class="cp"><strong>does not split</strong></td><td class="cp">0</td></tr>
+      <tr><td class="name"><code>U+0085</code></td><td class="cp"><strong>no</strong></td><td class="cp">yes</td><td class="cp"><strong>yes</strong></td><td class="cp">yes</td><td class="cp">splits</td><td class="cp">0</td></tr>
+      <tr><td class="name"><code>U+2028</code></td><td class="cp"><strong>yes</strong></td><td class="cp"><strong>no</strong></td><td class="cp">yes</td><td class="cp">yes</td><td class="cp">splits</td><td class="cp">0</td></tr>
+      <tr><td class="name"><code>U+2029</code></td><td class="cp"><strong>yes</strong></td><td class="cp"><strong>no</strong></td><td class="cp">yes</td><td class="cp">yes</td><td class="cp">splits</td><td class="cp">0</td></tr>
+    </tbody>
+  </table>
+
+  <p>Two of those columns are worth reading twice, because each one is the same engine contradicting
+    itself. JavaScript's <code>\s</code> calls U+2028 whitespace while JavaScript's <code>.</code>
+    refuses to match it &mdash; both are the language's own verdict on one character. And U+0085 is
+    the exact mirror image across languages: Python's <code>\s</code> matches it, JavaScript's does
+    not.</p>
+
+  <p>The full sweep makes the asymmetry concrete. Over all 1,112,064 non-surrogate code points,
+    JavaScript's <code>.</code> refuses exactly four &mdash; U+000A, U+000D, U+2028, U+2029 &mdash;
+    and <code>\s</code> matches exactly 25. Python's <code>.</code> refuses exactly one, U+000A, and its
+    <code>\s</code> matches 29 code points against JavaScript's 25 &mdash; the whole disagreement, in
+    one pair of numbers. So the same pattern on the same string:</p>
+
+  <pre><code># Python 3.13
+re.fullmatch(r"a.b", "a&#8232;b")     # matches
+
+// JavaScript, Node 22
+/^a.b$/.test("a&#8232;b")              // false</code></pre>
+
+  <p>It is not only regexes. A string made of nothing but one of these characters is empty to one
+    language and a character long to the other: JavaScript's <code>trim()</code> empties six of the
+    eleven &mdash; U+000A, U+000B, U+000C, U+000D, U+2028, U+2029 &mdash; while Python's
+    <code>strip()</code> empties all eleven, including U+001C, U+001D, U+001E, U+001F and U+0085.
+    <strong>A field containing only U+0085 passes a browser-side emptiness check and fails a
+    Python-side one.</strong> That is the same bug as the trimming above, wearing different
+    clothes.</p>
+
+  <p>The shell column is where a lot of lost afternoons come from. For three fields separated by
+    U+000A, <code>wc -l</code> reports 2 and <code>awk 'END{print NR}'</code> reports 3. Swap the
+    separator for any of the other nine and <code>wc -l</code> reports <strong>0</strong> while
+    <code>awk</code> and <code>grep -c ''</code> report 1. Same file, same bytes, and Python's
+    <code>splitlines()</code> insists there are three lines all along.</p>
+
+  <p>Comma-separated files have their own opinion. Python's <code>csv</code> writer quotes a field
+    for exactly two of the ten &mdash; U+000A and U+000D &mdash; and writes the other eight bare.
+    Read the result back and it is one field with two values in it, unquoted and unremarkable, right
+    up until something calls <code>splitlines()</code> on it.</p>
+
+  <h2>The browser is the one that does not break</h2>
+  <p>Here is the part that surprises people who have only met these characters through JavaScript.
+    A browser will not start a new line at U+2028 or U+2029. Not in any mode. Measured in Chromium
+    at 16&nbsp;px monospace with <code>white-space: pre</code>, the string <em>AAAA</em> + U+2028 +
+    <em>BBBB</em> lays out as a single line box 26&nbsp;px tall; the same string with U+000A is
+    50&nbsp;px. I tried all five values &mdash; <code>normal</code>, <code>pre</code>,
+    <code>pre-wrap</code>, <code>pre-line</code>, <code>nowrap</code> &mdash; and got one line box
+    and 26&nbsp;px every single time.</p>
+
+  <p>It is not free, though. The run measures 72&nbsp;px against 64&nbsp;px for the same eight
+    letters with nothing between them: one character cell of advance, and zero ink. Drawn on a
+    canvas at the same size, the string with U+2028 colours exactly as many pixels as the string
+    without it, 224 each, where an empty draw colours none. It takes up room on the line and shows
+    you nothing for it.</p>
+
+  <p>Form fields do not normalise it either. A <code>&lt;textarea&gt;</code> hands U+2028 and U+2029
+    back byte for byte. It does silently rewrite U+000D into U+000A, which is the normalisation
+    people are used to relying on &mdash; and that normalisation stops one character short of the
+    two characters on this page.</p>
+
+  <section class="tool">
+
+    <div class="pane">
+      <label for="lsinput">Paste text you did not type</label>
+      <textarea id="lsinput" spellcheck="false" placeholder="Paste something that came out of a PDF, a spreadsheet export, a terminal log, an API response..."></textarea>
+
+      <div class="row meta">
+        <span id="lscount">0 characters</span>
+      </div>
+
+      <div class="row">
+        <button id="lsrun" class="primary" type="button">Find line break characters</button>
+        <button id="lsnorm" type="button">Rewrite them all as \n</button>
+        <button id="lsclear" type="button">Clear</button>
+      </div>
+    </div>
+
+    <div class="pane">
+      <label for="lsoutput">Result</label>
+      <textarea id="lsoutput" spellcheck="false" readonly placeholder="The report appears here."></textarea>
+
+      <div class="row">
+        <button id="lscopy" type="button">Copy</button>
+        <span id="lscopied" class="copied" hidden>Copied</span>
+      </div>
+
+      <div id="lsreport"></div>
+    </div>
+
+  </section>
+
+  <p>The two numbers in that report are the whole point of this section. Paste a block that was
+    separated with U+2028 and the tool will tell you it is one line by <code>\n</code> and several
+    lines by the ten-character rule &mdash; which is precisely the disagreement that makes a file
+    look right in an editor and wrong in a script.</p>
+
   <h2>The one-line fix when you generate JS from data</h2>
   <p>If you are writing JSON into a <code>&lt;script&gt;</code> tag or building JavaScript source from
     data, escape these two characters explicitly. <code>JSON.stringify</code> will not do it for you:</p>
@@ -78,23 +227,30 @@ json.dumps({"a": "x&#8232;y"})
   .replace(/\u2028/g, "\\u2028")
   .replace(/\u2029/g, "\\u2029");</code></pre>
   <p>The output still parses to the same value &mdash; verified by round-tripping it back through
-    <code>JSON.parse</code> &mdash; but it now survives being pasted into source code.</p>
+    <code>JSON.parse</code> &mdash; but it now survives being pasted into source code. U+0085 does
+    not need the same treatment for JavaScript: inside a JavaScript string literal it is an ordinary
+    character, and always has been. It needs it for Python, where <code>splitlines()</code> will cut
+    your value in half. Escape for the language that will read the file, not for the one that wrote
+    it.</p>
 
   <h2>Checking whether you have them</h2>
-  <p>Both characters are invisible, so the only way to know is to look. The
-    <a href="/zero-width-space">zero-width space remover</a> shows you where invisible characters sit
-    in a block of text, and the <a href="/invisible-characters">invisible characters list</a> has the
-    code points. For a payload that will not parse at all, start with the
+  <p>All ten are invisible, so the only way to know is to look. The tool above counts them and rewrites
+    them. The <a href="/zero-width-space">zero-width space remover</a> shows you where invisible
+    characters sit in a block of text, and the <a href="/invisible-characters">invisible characters
+    list</a> has the code points. For a payload that will not parse at all, start with the
     <a href="/clean-json">JSON cleaner</a>.</p>
 
   <h2>What this page does not claim</h2>
-  <p>These measurements come from Node 22, current Chromium and Python 3.13 &mdash; the runtimes
+  <p>These measurements come from Node 22.22, Chromium 153 and Python 3.13 &mdash; the runtimes
     available here. Older JavaScript engines treated U+2028 and U+2029 as line terminators everywhere,
     including inside string literals, which is where this character's reputation comes from; that was
     relaxed in ES2019, and I could not test pre-2019 engines on this machine, so this page makes no
-    claim about them. Run the snippets above against the runtimes you actually ship to.</p>
+    claim about them. The eleven candidates above are the ones worth arguing about, not a complete
+    theory of line breaking: Unicode's own line-breaking algorithm has a far larger set of break
+    opportunities, and none of the tools measured here implement it. Run the snippets above against
+    the runtimes you actually ship to.</p>
 
-  <p class="crosslink">Measured 2026-09-21 on Node 22.22, Chromium (Playwright) and Python 3.13.
+  <p class="crosslink">Measured 2026-09-21 and 2026-10-07 on Node 22.22, Chromium (Playwright) and Python 3.13.
     Tools: <a href="/">Claude watermark remover</a>,
     <a href="/zero-width-space">zero-width space remover</a>,
     <a href="/clean-json">JSON cleaner</a>,
@@ -106,6 +262,8 @@ json.dumps({"a": "x&#8232;y"})
     <a href="/about">About</a> &middot; <a href="/privacy">Privacy</a> &middot; <a href="/contact">Contact</a> &middot; <a href="https://github.com/f6946672/stripinvisible/blob/main/line-separators.html">Source</a>
   </footer>
 </main>
+<script src="/core.js"></script>
+<script src="/line-separators.js"></script>
 <!-- Cloudflare Web Analytics -->
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token":"20874485db814b21a0a76d82d7f9b4de"}'></script>
 </body>
