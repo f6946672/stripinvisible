@@ -1,0 +1,301 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Punycode and Invisible Characters: Encoded, Translated or Deleted</title>
+<meta name="description" content="What punycode and IDNA do to the character you cannot see. Measured across 11 characters in Python, Node and Chromium: a look-alike is encoded to xn--, an invisible character is deleted so ap+U+200B+ple.com and apple.com are the same domain, a full-width character is translated, and two characters get three different answers from three implementations.">
+<link rel="canonical" href="https://stripinvisible.com/punycode">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://stripinvisible.com/punycode">
+<meta property="og:title" content="Punycode and Invisible Characters: Encoded, Translated or Deleted">
+<meta property="og:description" content="Punycode does not encode everything you type into a domain. Measured: an invisible character is deleted outright, a look-alike is encoded to xn--, a full-width character is translated into a different ASCII character, and two characters get three different answers from three implementations.">
+<meta name="twitter:card" content="summary">
+<meta property="og:image" content="https://stripinvisible.com/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:image" content="https://stripinvisible.com/og-image.png">
+
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/styles.css">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebPage",
+      "name": "Punycode and Invisible Characters: Encoded, Translated or Deleted",
+      "url": "https://stripinvisible.com/punycode",
+      "description": "What IDNA does to an invisible or look-alike character in a domain name, measured across 11 characters in Python 3.13.14, Node 22.22.2 and Chromium 153."
+    },
+    {
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "Strip Invisible", "item": "https://stripinvisible.com/" },
+        { "@type": "ListItem", "position": 2, "name": "Punycode" }
+      ]
+    },
+    {
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "Does punycode encode an invisible character in a domain name?",
+          "acceptedAnswer": { "@type": "Answer", "text": "No. Measured in Python 3.13.14, Node 22.22.2 and Chromium 153, a zero-width space, a soft hyphen, a byte order mark and a word joiner are all deleted before encoding. The domain ap followed by U+200B followed by ple.com comes out as apple.com in all three, with no error — the same domain as the one without the character." }
+        },
+        {
+          "@type": "Question",
+          "name": "What does a look-alike letter in a domain name become?",
+          "acceptedAnswer": { "@type": "Answer", "text": "It is encoded, and the address bar shows the encoding. Measured in all three implementations, a Cyrillic а in apаple.com produces xn--apple-5ve.com and a Greek ο produces xn--apple-sce.com. This is the part punycode is normally described as doing, and it is the only one of the four outcomes where your character survives into the address bar in a form you cannot read." }
+        },
+        {
+          "@type": "Question",
+          "name": "Is a full-width full stop in a domain name the same as an invisible character?",
+          "acceptedAnswer": { "@type": "Answer", "text": "No, and the two are easy to confuse because both can end up looking harmless. Measured with the same input, U+200B is deleted so ap+U+200B+ple.com becomes apple.com, while U+3002 is translated into a full stop so ap+U+3002+ple.com becomes ap.ple.com — a different domain with an extra label. Deletion removes a character; translation replaces it with a different one." }
+        },
+        {
+          "@type": "Question",
+          "name": "Do browsers and servers agree about a domain with an invisible character?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Not always. Measured on the same input, a Hangul filler gives three different answers: Python's idna codec encodes it to xn--apple-wfv.com, Node's URL parser refuses the domain outright, and Chromium deletes it and returns apple.com. A no-break space is split three ways as well, coming out as a literal space in Python, an error in Node and ap%20ple.com in Chromium." }
+        },
+        {
+          "@type": "Question",
+          "name": "Is putting an invisible character in a domain the same as putting one in a path?",
+          "acceptedAnswer": { "@type": "Answer", "text": "No, and the two go opposite ways. In a hostname the invisible characters measured here are deleted, so the domain collapses onto one that already exists. In a path the same characters are kept and written out as percent escapes, which is why a blank profile URL carries nine visible characters instead of nothing." }
+        }
+      ]
+    }
+  ]
+}
+</script>
+</head>
+<body>
+<main>
+
+  <nav class="crumbs" aria-label="Breadcrumb">
+    <a href="/">Strip Invisible</a> &rsaquo; <span>Punycode</span>
+  </nav>
+
+  <h1>Punycode: your invisible character is either encoded, translated or deleted</h1>
+
+  <p class="lede"><strong>Short answer:</strong> punycode is the encoding that lets a domain name
+    written in any script travel as ASCII, and the usual assumption is that it encodes whatever you
+    typed. Measured across eleven characters in three implementations, it does <strong>four</strong>
+    different things instead. A look-alike letter is <strong>encoded</strong>: <code>apаple.com</code>
+    comes out as <code>xn--apple-5ve.com</code>. An invisible character is <strong>deleted</strong>:
+    <code>ap</code> + U+200B + <code>ple.com</code> and <code>apple.com</code> come out as
+    <strong>the same domain</strong>, with no error. A full-width or ideographic character is
+    <strong>translated</strong> into a different ASCII character: <code>apａple.com</code> becomes
+    <code>apaple.com</code> and <code>ap。ple.com</code> becomes <code>ap.ple.com</code>. And two
+    characters get <strong>three different answers from three implementations</strong> &mdash; Python
+    encodes one of them, Node refuses it, and Chromium deletes it. The gap between the middle two is
+    the one that matters: both are quiet, but one removes a character and the other replaces it.</p>
+
+  <section class="tool">
+    <div class="pane">
+      <label for="pcinput">Paste a hostname</label>
+      <input id="pcinput" type="text" spellcheck="false" autocomplete="off" autocapitalize="off"
+             placeholder="ap ple.com">
+      <p class="row meta">Fill it with a character that is hard to see, then read the right-hand pane:
+        <button type="button" class="grabbtn" data-fillcp="8203">U+200B <span class="grabcp">zero width space</span></button>
+        <button type="button" class="grabbtn" data-fillcp="173">U+00AD <span class="grabcp">soft hyphen</span></button>
+        <button type="button" class="grabbtn" data-fillcp="8288">U+2060 <span class="grabcp">word joiner</span></button>
+        <button type="button" class="grabbtn" data-fillcp="12644">U+3164 <span class="grabcp">hangul filler</span></button>
+        <button type="button" class="grabbtn" data-fillcp="3002">U+3002 <span class="grabcp">ideographic full stop</span></button>
+        <button type="button" class="grabbtn" data-fillcp="65281">U+FF01 <span class="grabcp">fullwidth exclamation</span></button>
+      </p>
+    </div>
+    <div class="pane">
+      <label for="pcout">What this browser's URL parser makes of it</label>
+      <p id="pcout" class="preview empty">&mdash;</p>
+      <p id="pcverdict" class="verdict idle">Type or paste a hostname above.</p>
+      <p class="row meta">This pane is the browser you are reading this in, live &mdash; nothing is sent
+        anywhere. It is also the only one of the three implementations on this page you can run
+        yourself, which is why the two disagreements in the tables below are worth knowing about: your
+        browser is one vote of three.</p>
+    </div>
+  </section>
+
+  <h2>What the mapping step does to a character</h2>
+
+  <p>Before anything is encoded, the domain goes through a mapping step &mdash; the one the URL
+    standard points at, IDNA with its UTS&nbsp;#46 tables. That step is where a character is rewritten,
+    dropped or refused, and it runs before punycode does its work. So the honest question is not what
+    punycode does with your character; it is what is left of your character by the time punycode sees
+    it. Below, the same input &mdash; <code>ap</code>, the character, <code>ple.com</code> &mdash; is put
+    through all three implementations.</p>
+
+  <div class="scroll">
+    <table>
+      <thead>
+        <tr><th>Character</th><th>Python 3.13 <code>idna</code></th><th>Node 22.22.2 <code>URL</code></th><th>Chromium 153</th><th>What happened</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="nm">U+0430 Cyrillic а</td><td class="cp">xn--apple-5ve.com</td><td class="cp">xn--apple-5ve.com</td><td class="cp">xn--apple-5ve.com</td><td class="cp">encoded</td></tr>
+        <tr><td class="nm">U+03BF Greek ο</td><td class="cp">xn--apple-sce.com</td><td class="cp">xn--apple-sce.com</td><td class="cp">xn--apple-sce.com</td><td class="cp">encoded</td></tr>
+        <tr><td class="nm">U+200B zero width space</td><td class="cp">apple.com</td><td class="cp">apple.com</td><td class="cp">apple.com</td><td class="cp">deleted</td></tr>
+        <tr><td class="nm">U+00AD soft hyphen</td><td class="cp">apple.com</td><td class="cp">apple.com</td><td class="cp">apple.com</td><td class="cp">deleted</td></tr>
+        <tr><td class="nm">U+FEFF byte order mark</td><td class="cp">apple.com</td><td class="cp">apple.com</td><td class="cp">apple.com</td><td class="cp">deleted</td></tr>
+        <tr><td class="nm">U+2060 word joiner</td><td class="cp">apple.com</td><td class="cp">apple.com</td><td class="cp">apple.com</td><td class="cp">deleted</td></tr>
+        <tr><td class="nm">U+FF41 fullwidth a</td><td class="cp">apaple.com</td><td class="cp">apaple.com</td><td class="cp">apaple.com</td><td class="cp">translated to <code>a</code></td></tr>
+        <tr><td class="nm">U+3002 ideographic full stop</td><td class="cp">ap.ple.com</td><td class="cp">ap.ple.com</td><td class="cp">ap.ple.com</td><td class="cp">translated to <code>.</code></td></tr>
+        <tr><td class="nm">U+FF0E fullwidth full stop</td><td class="cp">ap.ple.com</td><td class="cp">ap.ple.com</td><td class="cp">ap.ple.com</td><td class="cp">translated to <code>.</code></td></tr>
+        <tr><td class="nm">U+3164 hangul filler</td><td class="cp">xn--apple-wfv.com</td><td class="cp">refused</td><td class="cp">apple.com</td><td class="cp">three answers</td></tr>
+        <tr><td class="nm">U+00A0 no-break space</td><td class="cp">ap ple.com</td><td class="cp">refused</td><td class="cp">ap%20ple.com</td><td class="cp">three answers</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>Nine of the eleven rows are the same in every column, which is what you would expect from a
+    standard. The other two are not, and they are the reason a domain that resolves on your machine can
+    fail on a server. "Refused" means the URL parser threw instead of returning a hostname &mdash;
+    measured in Node, <code>new URL('http://ap&#12644;ple.com/')</code> and
+    <code>new URL('http://ap&nbsp;ple.com/')</code> both raise a <code>TypeError</code>, while the same
+    two strings are accepted by the browser and by Python, which return three different hostnames
+    between them.</p>
+
+  <h2>Same result, different mechanism</h2>
+
+  <p>Four of the rows above end at <code>apple.com</code>, and the honest reading of that is not that
+    four characters behave the same way. It is that four characters were removed and one was replaced,
+    and the input happened to hide the difference: with the character sitting between the two
+    <code>p</code>s, deleting it leaves <code>apple</code>, and so does a translation that produces an
+    <code>a</code>.</p>
+
+  <p>Move the character one letter to the left and the two mechanisms separate. Put it between
+    <code>a</code> and <code>b</code> instead, so that a deleted character would leave
+    <code>ab.com</code> and a translated one would leave its replacement behind:</p>
+
+  <div class="scroll">
+    <table>
+      <thead>
+        <tr><th>Character, in <code>a&lt;char&gt;b.com</code></th><th>All three implementations</th><th>RFC&nbsp;3454 B.1 "mapped to nothing"</th><th>Mechanism</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="nm">U+200B zero width space</td><td class="cp">ab.com</td><td class="cp">yes</td><td class="cp">deleted &mdash; contributes nothing</td></tr>
+        <tr><td class="nm">U+00AD soft hyphen</td><td class="cp">ab.com</td><td class="cp">yes</td><td class="cp">deleted &mdash; contributes nothing</td></tr>
+        <tr><td class="nm">U+FEFF byte order mark</td><td class="cp">ab.com</td><td class="cp">yes</td><td class="cp">deleted &mdash; contributes nothing</td></tr>
+        <tr><td class="nm">U+2060 word joiner</td><td class="cp">ab.com</td><td class="cp">yes</td><td class="cp">deleted &mdash; contributes nothing</td></tr>
+        <tr><td class="nm">U+FF41 fullwidth a</td><td class="cp">aab.com</td><td class="cp">no</td><td class="cp">translated &mdash; contributes an <code>a</code></td></tr>
+        <tr><td class="nm">U+3002 ideographic full stop</td><td class="cp">a.b.com</td><td class="cp">no</td><td class="cp">translated &mdash; contributes a <code>.</code></td></tr>
+        <tr><td class="nm">U+FF0E fullwidth full stop</td><td class="cp">a.b.com</td><td class="cp">no</td><td class="cp">translated &mdash; contributes a <code>.</code></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>Read the middle column as the proof. <code>ab.com</code> has two letters in it, so the character
+    that was typed contributed nothing at all &mdash; it was dropped and the letters on either side
+    closed up. <code>aab.com</code> and <code>a.b.com</code> each carry one more character than the
+    input had letters, and the extra one is a real ASCII character the mapping step put there. The
+    third column reaches the same split a different way: it is the standard's own table of characters
+    mapped to nothing, not something measured here, and the four rows it marks are exactly the four
+    rows that lose their character. Two independent lines agree, which is why the two groups are not
+    the same thing even when they land on the same domain.</p>
+
+  <p>One of the three translations does not come from the usual place, and it is worth knowing which.
+    Normalising U+FF41 and U+FF0E under NFKC gives <code>a</code> and <code>.</code> respectively, so
+    those two are the ordinary compatibility mapping. U+3002 is unchanged under all four normalisation
+    forms &mdash; measured, NFC, NFD, NFKC and NFKD all leave it exactly as it is &mdash; and the three
+    implementations still turn it into a full stop. That translation is the domain layer's own rule for
+    what counts as a label separator rather than a Unicode normalisation, which is why it survives a
+    step that is supposed to be the one rewriting characters.</p>
+
+  <h2>The deleted ones are the ones that cannot be seen</h2>
+
+  <p>Four of the eleven characters are the characters this site is about, and they are the four that
+    vanish. A zero-width space, a soft hyphen, a byte order mark and a word joiner are all dropped
+    before encoding, in every implementation, silently. There is no warning, no placeholder and no
+    record of the removal in the output: the hostname that comes back is a perfectly ordinary domain
+    that already exists.</p>
+
+  <p>That has a consequence worth stating plainly. <code>ap</code> + U+200B + <code>ple.com</code> is
+    not a domain that resembles <code>apple.com</code>; it <em>is</em> <code>apple.com</code> once it
+    reaches the resolver, in all three implementations measured. So the character does not hide
+    anything and does not disguise anything. What it does is disappear, which means a domain carrying it
+    is not a different domain at all &mdash; and a check written to spot a look-alike domain is looking
+    for the wrong thing when it is handed this one, because there is nothing left to spot.</p>
+
+  <h2>The look-alikes are the ones that get encoded</h2>
+
+  <p>The rows that end in <code>xn--</code> are the ones punycode is normally described as handling, and
+    the description is accurate. A Cyrillic а or a Greek ο is a letter, it survives the mapping step,
+    and it is encoded: the address bar then carries ASCII that does not read like the name you typed.
+    All three implementations agree on both strings, to the character.</p>
+
+  <p>The practical difference from the deleted group is where the evidence ends up. A deleted character
+    leaves nothing, so the browser has nothing to display and shows an ordinary domain. An encoded one
+    leaves a string, so the browser has to decide what to show: the Unicode name or the encoding. Those
+    two rows are the case where the decision is visible &mdash; what you read is not what the request
+    carried, and unlike the invisible characters this is a real substitution rather than a deletion. It
+    is also the reason the two are usually discussed together and should not be: one is a character that
+    is gone, the other is a character that is doing something.</p>
+
+  <h2>Two characters, three implementations, three answers</h2>
+
+  <p>The last two rows of the first table are not a curiosity, because they are the two that decide
+    whether a domain works at all. A Hangul filler and a no-break space are both perfectly ordinary
+    characters in text; in a hostname they are split three ways.</p>
+
+  <p>A Hangul filler is encoded by Python to <code>xn--apple-wfv.com</code>, refused by Node's URL
+    parser, and deleted by Chromium, which returns <code>apple.com</code>. A no-break space is left as a
+    literal space by Python, refused by Node, and written as <code>%20</code> by Chromium. So a hostname
+    containing either one does not have a single correct answer to compare against: it has three, and
+    which one you get depends on which of the three ran. The mapping step is a standard, and the
+    standard is implemented to three different extents &mdash; the browser is the most permissive of the
+    three, and the two runtimes that would have to agree in a server-side check are the two that
+    refuse.</p>
+
+  <h2>Why this is not the same as the character being in the path</h2>
+
+  <p>A domain name is not the only place in a URL a character can go, and the two positions go opposite
+    ways. In the hostname, the invisible characters measured on this page are deleted, so the domain
+    collapses onto one that already exists. In the path they are kept, and the URL serialiser writes
+    each one out as a percent escape, so a blank profile URL ends up carrying nine visible characters
+    instead of none.</p>
+
+  <p>Deletion in one position and preservation in the other is why the two questions have different
+    answers, and it is what makes the domain case the sharper one. A path that keeps your character is
+    at least honest about the fact that there is a character there. A hostname that drops it does not
+    leave a trace to be honest about: the string you typed and the string that resolves are the same
+    string, and the character is not part of either. The measured comparison between a username and a
+    profile URL is on <a href="/invisible-username">the invisible username page</a>; what is on this
+    page is the other half, where the character is not preserved and not encoded but removed.</p>
+
+  <h2>What this page does not tell you</h2>
+
+  <p>Whether any particular domain is registered, or what a browser will do with one that is. The
+    measurements above are of the mapping and encoding steps, run on eleven characters, and the input is
+    a made-up domain throughout. A registrar, a certificate authority and a browser's own display rules
+    each add their own layer, and those layers are not measured here.</p>
+
+  <p>The set of eleven is the set measured, not a complete list of the characters that map to nothing.
+    RFC&nbsp;3454's table B.1 is much longer than the four rows above, and a different set moves the
+    counts without moving the direction of any result. The implementations are single builds as well.
+    Python's built-in <code>idna</code> codec follows the older IDNA2003 rules rather than the UTS&nbsp;#46
+    tables the URL standard points at, which is part of why it is the odd one out on the Hangul filler
+    row; Node 22.22.2 carries ICU 78.2 with Unicode 17.0; Chromium 153 has its own implementation of the
+    same standard. Categories and mechanisms will hold across versions, but the exact hostnames in the
+    first table are a measurement of these three builds.</p>
+
+  <p class="crosslink">Measured 2026-10-07 with Python 3.13.14 (its <code>idna</code> codec and
+    <code>stringprep</code>), Node 22.22.2 (<code>new URL()</code>, ICU 78.2, Unicode 17.0) and
+    Chromium 153 via Playwright.
+    Related: <a href="/invisible-characters">the full list of invisible characters</a>,
+    <a href="/invisible-username">why a blank username still has to be unique</a>,
+    <a href="/zero-width-space">the zero-width space remover</a>,
+    <a href="/empty-character">why there is no empty character</a>,
+    <a href="/invisible-letter">the four invisible characters that are real letters</a>,
+    <a href="/tag-characters">tag characters that hide a whole ASCII message</a>,
+    <a href="/hidden-characters">how to find hidden characters in a file</a>, and
+    <a href="/compare-text">comparing two texts that look identical</a>.</p>
+
+  <footer class="foot">
+    <a href="/about">About</a> &middot; <a href="/privacy">Privacy</a> &middot; <a href="/contact">Contact</a> &middot; <a href="https://github.com/f6946672/stripinvisible/blob/main/punycode.html">Source</a>
+  </footer>
+</main>
+<script src="/list.js"></script>
+<script src="/punycode.js"></script>
+<!-- Cloudflare Web Analytics -->
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token":"20874485db814b21a0a76d82d7f9b4de"}'></script>
+</body>
+</html>
