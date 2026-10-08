@@ -117,6 +117,28 @@
     <p>That is why the usual advice fails on data exported from a web application or a financial
       system: the characters causing the trouble were never in the range those two functions cover.</p>
 
+    <h2>Three things called TRIM, and they do not agree</h2>
+    <p>The worksheet <code>TRIM()</code> does two jobs at once. It takes spaces off both ends and it
+      collapses every run of spaces inside the text down to a single one, which is not part of
+      <code>TRIM</code> anywhere else. In VBA, <code>Trim()</code> touches the ends and leaves the
+      middle exactly as it was; to get the worksheet behaviour out of a macro you have to ask for
+      <code>WorksheetFunction.Trim</code> by name. In SQL, <code>TRIM</code> is narrower than
+      either.</p>
+    <p>Measured here on SQLite: <code>trim(X)</code> removes <code>U+0020</code> and nothing else. A
+      tab stays. A line feed stays. A carriage return stays. So does a non-breaking space, a zero
+      width space, a byte order mark, <code>U+180E</code> and an ideographic space &mdash; five
+      characters out of five still present after the call, all five invisible on screen.</p>
+    <p>SQL will take the set from you instead: <code>trim(X, Y)</code> strips whatever is in
+      <code>Y</code>. Given a set made of a plain space, <code>U+00A0</code>, <code>U+200B</code>,
+      <code>U+FEFF</code>, <code>U+180E</code> and <code>U+3000</code>, all five come off the ends.
+      A soft hyphen does not, and <code>U+202D</code> does not, because neither one was named in the
+      set. What you hand it is the entire definition of what counts as dirt.</p>
+    <p>Which means a column trimmed in Excel and then trimmed again on its way into a database has
+      been through two different functions that share a name, and the second is the weaker of the
+      two. <code>CLEAN()</code> has the same shape of trouble at the other end of its range: it
+      stops at 31, so <code>CHAR(127)</code> &mdash; the first thing people reach for once the
+      obvious ones fail &mdash; sits outside it and comes back untouched.</p>
+
     <h2>How to tell whether a cell has one</h2>
     <p>The length is the tell. Compare the raw cell against a cleaned version:</p>
     <p><code>=LEN(A1)&lt;&gt;LEN(SUBSTITUTE(A1,UNICHAR(8203),""))</code></p>
@@ -133,12 +155,93 @@
       Add another <code>SUBSTITUTE(...,UNICHAR(8206),"")</code> layer if your data comes from
       right-to-left text.</p>
 
+    <h2>The 122-code list, checked one code at a time</h2>
+    <p>The answer most often copied for this job is not a formula. It is a macro carrying a list of
+      122 decimal codes, and it travels under headings like "remove all special characters" into
+      forums, internal wikis and company templates. I ran all 122 through the Unicode character
+      database (Python 3.13, Unicode 15.1) and sorted them by what they actually are.</p>
+    <div class="scroll">
+      <table>
+        <thead>
+          <tr><th>What they are</th><th>How many</th><th>What running it does</th></tr>
+        </thead>
+        <tbody>
+          <tr><td class="name">Control characters, C0 and C1</td><td class="cp">38</td>
+            <td>Two of the 38 are decimal 9 and decimal 13 &mdash; the tab and the carriage return. Run it on a column and the structure your data is built out of goes with them.</td></tr>
+          <tr><td class="name">Format characters (<code>Cf</code>)</td><td class="cp">22</td>
+            <td>The part of the list that does what it claims. Not all of them are safe to delete, though: U+200C and U+200D hold Persian and Arabic words together and assemble family emoji, U+202A to U+202E set text direction, and U+2061 to U+2064 are invisible operators that carry meaning in mathematics.</td></tr>
+          <tr><td class="name">Combining marks (<code>Mn</code>)</td><td class="cp">15</td>
+            <td>These draw. U+180B, U+180C and U+180D choose which variant of a Mongolian letter gets rendered; U+FE24 through U+FE2F are combining half marks, which are diacritics. Deleting any of the fifteen changes text that was meant to be seen.</td></tr>
+          <tr><td class="name">Code points that cannot occur in text</td><td class="cp">46</td>
+            <td>32 noncharacters (U+FDD0 to U+FDEF) and 14 unassigned code points in the Thaana block (U+07B2 to U+07BF). Nothing you paste out of anything will ever contain one.</td></tr>
+          <tr><td class="name">Paragraph separator</td><td class="cp">1</td>
+            <td>U+2029. Removing it joins two paragraphs into one.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>Then there are the gaps, and they fall exactly where real data lives. The list runs from 159
+      straight to 1970, so decimal 160 (<code>U+00A0</code>) and decimal 173 (<code>U+00AD</code>)
+      are not on it. It carries 8289, 8290, 8291 and 8292 but not 8288, so <code>U+2060</code> is
+      missing as well. A non-breaking space, a soft hyphen and a word joiner are three of the
+      characters most often found in text pasted out of a browser, a PDF or a web application, and
+      the list that promises to remove everything invisible steps over all three.</p>
+    <p>One of the 22 deserves its own note, because the standard changed its mind about it. Decimal
+      6158 is <code>U+180E</code>, the Mongolian vowel separator. In the Unicode character database
+      up to and including version 6.2 it is filed as a space separator, category <code>Zs</code>;
+      from version 6.3 onward it is a format character, category <code>Cf</code>. On current data it
+      is not whitespace to Python: <code>isspace()</code> returns false and <code>strip()</code>
+      leaves it where it is. Its three neighbours in the list, 6155 to 6157, are not invisible at
+      all &mdash; they are the free variation selectors, and their whole job is to pick a glyph.</p>
+
+    <h2>The one-line fix that takes the punctuation with it</h2>
+    <p>When a merge refuses to match two columns that look identical, the remedy usually offered is
+      a range instead of a list: strip everything from <code>U+2000</code> to <code>U+206F</code> and
+      be done with it. That range is 112 code points. Twenty-five of them are format characters.
+      Fifteen more are spaces and separators. One is unassigned. The remaining seventy-one are
+      punctuation people typed on purpose &mdash; en and em dashes, curly quotes in four shapes, the
+      ellipsis, the bullet, the prime marks, the daggers.</p>
+    <p>Anyone who has run that one-liner over a column of prose has watched the quotes straighten
+      and the dashes disappear. It works, in the sense that the invisible characters are gone. So is
+      a lot else.</p>
+
     <h2>Or use Find and Replace with the character itself</h2>
     <p>Sometimes a formula is overkill. Copy the actual character from the
       <a href="/invisible-characters">character list</a>, press <code>Ctrl</code>+<code>H</code> in
       Excel, paste it into <em>Find what</em>, leave <em>Replace with</em> empty and hit
       <em>Replace All</em>. Because the character is invisible, the Find box will look empty &mdash;
       it is not.</p>
+
+    <h2>What the workbook file does to the character first</h2>
+    <p>An .xlsx file is a zip archive of XML parts, and the text of your cells sits in one of them.
+      XML 1.0 does not admit every code point: the legal set is tab, line feed, carriage return, and
+      everything from <code>U+0020</code> upward. Two conforming parsers here &mdash; the one behind
+      Python's ElementTree and the one behind minidom &mdash; were each handed a one-character
+      document. Both accepted the tab, the line feed, the carriage return and <code>U+007F</code>.
+      Both refused <code>U+000B</code>, <code>U+000C</code>, <code>U+001C</code>,
+      <code>U+001D</code>, <code>U+001E</code> and <code>U+001F</code>.</p>
+    <p>All six are in the 122-code list, as decimals 11, 12, 28, 29, 30 and 31. A cell holding
+      <code>CHAR(11)</code> or <code>CHAR(12)</code> cannot be written into a conforming workbook as
+      itself. It gets dropped, it gets replaced, or it gets spelled some other way &mdash; and
+      whichever of those happens, it is no longer the value you typed.</p>
+    <p>The writing side is the less careful of the two. Python's own XML serializer, handed a
+      vertical tab, writes it straight out: the element comes back as <code>&lt;t&gt;</code>, the raw
+      byte, <code>&lt;/t&gt;</code>, with nothing escaped and no warning. The file it produces is one
+      that no conforming reader will open.</p>
+
+    <h2>What a single-byte export does to it</h2>
+    <p>Text has to be encoded before it can be written to a file, and the invisible characters are
+      the ones with no seat reserved for them. Of seventeen of them tried against Windows-1252 here,
+      three have a byte: <code>U+00A0</code>, <code>U+00AD</code> and the en dash. The other
+      fourteen &mdash; zero width space, word joiner, both joiners, the directional overrides, the
+      BOM, U+2028, U+2029, U+3164, U+3000 and the rest &mdash; have none. A writer that does not
+      halt on them substitutes a question mark, so the character you could not see turns into one you
+      can, and into a new reason for every lookup against that column to miss.</p>
+    <p>The way back is quieter and worse. Save as UTF-8, open the file as though it were ANSI, and
+      each invisible character returns as two or three perfectly ordinary letters:
+      <code>U+200B</code> comes back as <code>â€‹</code>, <code>U+FEFF</code> as
+      <code>ï»¿</code>. <code>U+2060</code> is where it stops being merely cosmetic: its bytes are
+      <code>E2 81 A0</code>, and <code>81</code> means nothing in Windows-1252, so a reader that
+      does not guess raises an error on the file instead of mangling it.</p>
 
     <h2>Decimal codes for UNICHAR</h2>
     <p><code>UNICHAR</code> takes a decimal number, not a hex codepoint, which is the part people

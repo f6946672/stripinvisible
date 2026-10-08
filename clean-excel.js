@@ -44,8 +44,13 @@
       return;
     }
 
+    var beyond = rows.filter(function (r) { return r[0] > 0x1f && r[0] !== 0x20; });
+    var beyondCount = beyond.reduce(function (s, r) { return s + r[1]; }, 0);
+
     var html = '<p class="summary">' + total + ' character' + (total === 1 ? '' : 's') +
-      ' removed &middot; ' + res.before + ' &rarr; ' + res.after + '</p>';
+      ' removed &middot; ' + res.before + ' &rarr; ' + res.after +
+      (beyondCount ? ' &middot; ' + beyondCount + ' of them are outside codes 0&ndash;31, so CLEAN() and TRIM() could never have touched them' : '') +
+      '</p>';
     html += '<div class="scroll"><table><thead><tr><th>Codepoint</th><th>Name</th><th>Count</th></tr></thead><tbody>';
     rows.forEach(function (r) {
       html += '<tr><td class="cp">' + SI.cpHex(r[0]) + '</td><td class="name">' +
