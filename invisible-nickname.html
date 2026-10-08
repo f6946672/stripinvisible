@@ -1,0 +1,299 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Invisible Nickname: What a Blank Display Name Still Draws</title>
+<meta name="description" content="An invisible nickname is a display name with nothing to read in it, and the surprise is what gets drawn from it. Measured in Chromium 153: the character in a 40 px avatar circle is 0.00 px for a zero-width space, 4.00 px for a no-break space and 16.00 px for a Hangul filler, against 11.00 px for the A of a real name. Four ways of asking for the first character disagree, and a character on the end leaves the avatar letter alone.">
+<link rel="canonical" href="https://stripinvisible.com/invisible-nickname">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://stripinvisible.com/invisible-nickname">
+<meta property="og:title" content="Invisible Nickname: What a Blank Display Name Still Draws">
+<meta property="og:description" content="Measured in Chromium 153: a blank display name still renders an avatar, a row and a letter. A zero-width space draws 0.00 px in the avatar circle, a no-break space 4.00 px, a Hangul filler 16.00 px — wider than the capital A of a real name. Four primitives disagree about which character is first, and a character on the end changes none of them.">
+<meta name="twitter:card" content="summary">
+<meta property="og:image" content="https://stripinvisible.com/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:image" content="https://stripinvisible.com/og-image.png">
+
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/styles.css">
+<style>
+.nk-row { display: flex; align-items: center; gap: 10px; padding: 6px 0; }
+.nk-av { width: 40px; height: 40px; border-radius: 50%; background: #e6f1fb; display: flex;
+  align-items: center; justify-content: center; font-weight: 500; color: #185fa5;
+  overflow: hidden; flex: 0 0 40px; font-size: 16px; line-height: 1; }
+.nk-name { font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  min-width: 0; }
+.nk-facts { margin: 10px 0 0; padding: 0; list-style: none; font-size: 0.82rem; }
+.nk-facts li { display: flex; justify-content: space-between; gap: 12px; padding: 3px 0;
+  border-bottom: 1px solid var(--line); }
+.nk-facts b { font-weight: 600; font-variant-numeric: tabular-nums; }
+.nk-strip { border: 1px dashed var(--line); border-radius: 8px; padding: 10px; margin-top: 10px;
+  background: #fff; }
+</style>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebPage",
+      "name": "Invisible Nickname: What a Blank Display Name Still Draws",
+      "url": "https://stripinvisible.com/invisible-nickname",
+      "description": "What a platform derives from a display name that renders as nothing: the character in the avatar circle, the width the name takes in a row, and why a character on the end changes neither. Measured in Chromium 153 and Node 22.22.2."
+    },
+    {
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "Strip Invisible", "item": "https://stripinvisible.com/" },
+        { "@type": "ListItem", "position": 2, "name": "Invisible nickname" }
+      ]
+    },
+    {
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "Does an invisible nickname show up as an empty avatar?",
+          "acceptedAnswer": { "@type": "Answer", "text": "No. Measured in Chromium 153, the character drawn in a 40 px avatar circle is 0.00 px wide for a zero-width space, 0.00 px for a word joiner, 0.00 px for a byte order mark, 4.00 px for a no-break space and 16.00 px for a Hangul filler. A real name's capital A is 11.00 px, so the Hangul filler draws a wider blank than the letter it replaces. The circle is not empty; it is occupied by something you cannot read." }
+        },
+        {
+          "@type": "Question",
+          "name": "Which character does a platform take as the avatar letter?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Whichever function it happens to call, and four ordinary ones do not agree. Measured on a name of U+00A0 followed by Ada: the first grapheme, charAt(0) and toUpperCase()[0] all return U+00A0, while trim() followed by the first character returns A. On U+FEFF followed by Ada the split is the same. Two services that each pick the first character can therefore draw two different avatars for one name." }
+        },
+        {
+          "@type": "Question",
+          "name": "How wide is a nickname that renders as nothing?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Not zero, unless it is made of zero-width characters. Measured in Chromium at 16 px, a clean Ada takes 27.00 px of name width. Ten zero-width spaces take 0.00 px, ten Hangul fillers take 160.00 px, and one Hangul filler in front of Ada takes 43.00 px — 16.00 px more than the same name without it. A blank nickname can be the widest row in the list." }
+        },
+        {
+          "@type": "Question",
+          "name": "Why does a character on the end of a nickname not change the avatar?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Because every way of asking for the first character reads from the front. Measured across U+200B, U+3164, U+2060 and U+FEFF, a trailing copy leaves charAt(0) as A in all four, so the avatar is unchanged — which matters because the end of the name is where most people paste it. The width is a different story: a trailing Hangul filler still takes the name from 27.00 px to 43.00 px." }
+        },
+        {
+          "@type": "Question",
+          "name": "Is a blank nickname the same problem as a blank username?",
+          "acceptedAnswer": { "@type": "Answer", "text": "No, and they fail in different places. A username has to be unique, so the question there is whether the platform can tell two blank names apart. A nickname is only ever displayed, so the question is what gets drawn from it — the letter in the avatar circle, the width of the row, the position in the list. This page measures the drawing side." }
+        }
+      ]
+    }
+  ]
+}
+</script>
+</head>
+<body>
+<main>
+
+  <nav class="crumbs" aria-label="Breadcrumb">
+    <a href="/">Strip Invisible</a> &rsaquo; <span>Invisible nickname</span>
+  </nav>
+
+  <h1>Invisible nickname: a blank display name is not blank once it is drawn</h1>
+
+  <p class="lede"><strong>Short answer:</strong> an invisible nickname is a display name with nothing
+    readable in it, and the part that surprises people is not the name &mdash; it is what gets drawn
+    from it. Measured in Chromium 153, the character placed in a 40 px avatar circle is
+    <strong>0.00 px</strong> wide for a zero-width space, <strong>4.00 px</strong> for a no-break
+    space and <strong>16.00 px</strong> for a Hangul filler, against <strong>11.00 px</strong> for the
+    capital A of a real name &mdash; so the filler draws a wider blank than the letter it replaced.
+    Four ordinary ways of asking &ldquo;what is the first character&rdquo; disagree about the same
+    name, which means the avatar letter is a property of the function the platform called and not of
+    the name. And position decides what changes: a character on the <em>end</em> leaves the avatar
+    letter alone, and the end is where most people paste it.</p>
+
+  <section class="tool">
+    <div class="pane">
+      <label for="nkinput">Paste a nickname</label>
+      <input id="nkinput" type="text" spellcheck="false" autocomplete="off" autocapitalize="off"
+             placeholder="Ada">
+      <p class="row meta">Fill it with a character that is hard to see, then read the right-hand pane:
+        <button type="button" class="grabbtn" data-nkcp="8203">U+200B <span class="grabcp">zero width space</span></button>
+        <button type="button" class="grabbtn" data-nkcp="12644">U+3164 <span class="grabcp">hangul filler</span></button>
+        <button type="button" class="grabbtn" data-nkcp="160">U+00A0 <span class="grabcp">no-break space</span></button>
+        <button type="button" class="grabbtn" data-nkcp="65279">U+FEFF <span class="grabcp">byte order mark</span></button>
+      </p>
+      <p class="row meta">Then move it from one end to the other and watch which readings change:
+        <button type="button" class="grabbtn" data-nkmove="end">move it to the end</button>
+        <button type="button" class="grabbtn" data-nkmove="front">move it back to the front</button>
+      </p>
+    </div>
+    <div class="pane">
+      <label for="nkout">What this browser draws from it</label>
+      <div class="nk-strip">
+        <div class="nk-row">
+          <div class="nk-av" id="nkavatar" aria-hidden="true"></div>
+          <div class="nk-name" id="nkout">Ada</div>
+        </div>
+      </div>
+      <ul class="nk-facts" id="nkfacts"></ul>
+      <p id="nkverdict" class="verdict idle">Type or paste a nickname above.</p>
+    </div>
+  </section>
+
+  <h2>The avatar letter is whichever function the platform called</h2>
+
+  <p>An avatar made from a display name needs one character, and there is more than one way to ask for
+    it. Four of them are ordinary: take the first grapheme with <code>Intl.Segmenter</code>, take
+    <code>charAt(0)</code>, uppercase the name and take the first character, or trim the name first and
+    then take the first character. On an ASCII name all four return the same letter. On a name that
+    starts with something invisible they do not, and the disagreement is not a rounding difference
+    &mdash; it decides whether the circle gets a letter or a blank.</p>
+
+  <div class="scroll">
+    <table>
+      <thead>
+        <tr><th>Name</th><th>First grapheme</th><th><code>charAt(0)</code></th><th><code>toUpperCase()[0]</code></th><th><code>trim()</code> then first</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="nm">Ada</td><td class="cp">U+0041</td><td class="cp">U+0041</td><td class="cp">U+0041</td><td class="cp">U+0041</td></tr>
+        <tr><td class="nm">U+200B then Ada</td><td class="cp">U+200B</td><td class="cp">U+200B</td><td class="cp">U+200B</td><td class="cp">U+200B</td></tr>
+        <tr><td class="nm">U+3164 then Ada</td><td class="cp">U+3164</td><td class="cp">U+3164</td><td class="cp">U+3164</td><td class="cp">U+3164</td></tr>
+        <tr><td class="nm">U+00A0 then Ada</td><td class="cp">U+00A0</td><td class="cp">U+00A0</td><td class="cp">U+00A0</td><td class="cp"><strong>U+0041</strong></td></tr>
+        <tr><td class="nm">U+FEFF then Ada</td><td class="cp">U+FEFF</td><td class="cp">U+FEFF</td><td class="cp">U+FEFF</td><td class="cp"><strong>U+0041</strong></td></tr>
+        <tr><td class="nm">Ada then U+200B</td><td class="cp">U+0041</td><td class="cp">U+0041</td><td class="cp">U+0041</td><td class="cp">U+0041</td></tr>
+        <tr><td class="nm">Ada then U+3164</td><td class="cp">U+0041</td><td class="cp">U+0041</td><td class="cp">U+0041</td><td class="cp">U+0041</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>The two rows in the middle are the ones that bite. A no-break space and a byte order mark are both
+    characters that a trim removes and that no uppercase step touches, so the same name has two
+    possible avatars depending on the order the platform did things in: one that draws a blank circle,
+    and one that draws the letter <strong>A</strong>. Neither implementation is broken, and nothing in
+    the name says which one you will get. A service that renders a name on the client and matches it on
+    the server can show one avatar and store the other.</p>
+
+  <p>Notice also that the last two rows are identical to the first. A character on the end of the name
+    does not reach the front of it, and every one of the four primitives reads from the front. That is
+    worth stating plainly because the end of the name is the convenient place to paste something
+    &mdash; it does not require moving the cursor past a word &mdash; and it is the position where the
+    avatar is guaranteed to come out unchanged.</p>
+
+  <h2>What the avatar circle actually draws</h2>
+
+  <p>The circle is usually a fixed size with the character centred in it, so what the character
+    occupies is a measurable width rather than a guess. Measured in Chromium at a 16 px font, the same
+    character that decides the avatar draws a very different amount of the circle depending on which
+    one it is.</p>
+
+  <div class="scroll">
+    <table>
+      <thead>
+        <tr><th>Character in the circle</th><th>Width it occupies</th><th>Against a real letter</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="nm">U+0041 (A, from <code>Ada</code>)</td><td class="cp">11.00 px</td><td class="cp">the reference</td></tr>
+        <tr><td class="nm">U+200B zero width space</td><td class="cp">0.00 px</td><td class="cp">a genuinely empty circle</td></tr>
+        <tr><td class="nm">U+2060 word joiner</td><td class="cp">0.00 px</td><td class="cp">a genuinely empty circle</td></tr>
+        <tr><td class="nm">U+FEFF byte order mark</td><td class="cp">0.00 px</td><td class="cp">a genuinely empty circle</td></tr>
+        <tr><td class="nm">U+00A0 no-break space</td><td class="cp">4.00 px</td><td class="cp">less than half a letter</td></tr>
+        <tr><td class="nm">U+3164 Hangul filler</td><td class="cp"><strong>16.00 px</strong></td><td class="cp">wider than the letter it replaced</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>The Hangul filler is the row that changes the picture, because it is the only one of the six that
+    draws <em>more</em> than the letter. Its name says filler and its category is a letter, and the
+    measurement agrees with the category rather than the name: it reserves a full em of horizontal
+    space while painting nothing. So an avatar built from a name that starts with one is not an empty
+    circle &mdash; it is a circle with a full-width blank pushed to one side of it, and in a small
+    circle that blank is what the eye reads as the avatar being off-centre rather than missing.</p>
+
+  <h2>How much of the row a nickname takes</h2>
+
+  <p>The same character also decides how wide the name is wherever it is listed, and here the effect
+    compounds, because a name can hold more than one. Measured in Chromium at 16 px, with a clean
+    <code>Ada</code> as the baseline at 27.00 px of text width.</p>
+
+  <div class="scroll">
+    <table>
+      <thead>
+        <tr><th>Name</th><th>Graphemes</th><th>Text width</th><th>Against <code>Ada</code></th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="nm">Ada</td><td class="cp">3</td><td class="cp">27.00 px</td><td class="cp">baseline</td></tr>
+        <tr><td class="nm">U+200B then Ada</td><td class="cp">4</td><td class="cp">27.00 px</td><td class="cp">+0.00 px</td></tr>
+        <tr><td class="nm">U+2060 then Ada</td><td class="cp">4</td><td class="cp">27.00 px</td><td class="cp">+0.00 px</td></tr>
+        <tr><td class="nm">U+FEFF then Ada</td><td class="cp">4</td><td class="cp">27.00 px</td><td class="cp">+0.00 px</td></tr>
+        <tr><td class="nm">U+00A0 then Ada</td><td class="cp">4</td><td class="cp">31.00 px</td><td class="cp">+4.00 px</td></tr>
+        <tr><td class="nm">U+3164 then Ada</td><td class="cp">4</td><td class="cp">43.00 px</td><td class="cp"><strong>+16.00 px</strong></td></tr>
+        <tr><td class="nm">ten U+200B</td><td class="cp">10</td><td class="cp">0.00 px</td><td class="cp">a row with no text in it</td></tr>
+        <tr><td class="nm">ten U+3164</td><td class="cp">10</td><td class="cp"><strong>160.00 px</strong></td><td class="cp">about six times the baseline</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>Two rows at the bottom are the reason this is a layout problem rather than a curiosity. Ten
+    zero-width spaces take up no width at all, so the name column collapses and the row reads as a
+    blank line with an avatar beside it. Ten Hangul fillers take up 160.00 px, which in a narrow list
+    is a row that pushes everything to its right &mdash; and each individual character is still
+    invisible, so nothing on screen explains the width. The count of graphemes tells the same story
+    from the other side: a name of ten fillers reports ten characters and shows none.</p>
+
+  <p>Whether two blank names are the same name is a different question, and it is measured on
+    <a href="/invisible-username">the invisible username page</a>, where a collator calls a name with a
+    zero-width space appended equal to the name without it. What is on this page is the display side:
+    what is drawn, how wide, and where.</p>
+
+  <h2>Why a character on the end changes none of it</h2>
+
+  <p>This is the part that makes the problem quiet. Every primitive that produces an avatar reads the
+    name from the front, so a character appended to the end is not in any of them, and the avatar comes
+    out exactly as it would for the clean name. Measured across four characters, the first character is
+    U+0041 in every case, identical to a name that never had the character at all.</p>
+
+  <div class="scroll">
+    <table>
+      <thead>
+        <tr><th>Appended to <code>Ada</code></th><th>First grapheme</th><th>Text width</th><th>What changes</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="nm">U+200B</td><td class="cp">U+0041</td><td class="cp">27.00 px</td><td class="cp">nothing visible at all</td></tr>
+        <tr><td class="nm">U+3164</td><td class="cp">U+0041</td><td class="cp"><strong>43.00 px</strong></td><td class="cp">the row width, not the avatar</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>The second row is the split worth keeping: the avatar is untouched and the row is not. So the same
+    character in the same name has an effect that depends entirely on which end it is on &mdash; in
+    front of the name it takes over the avatar, behind the name it only widens the row. A rule of thumb
+    that says &ldquo;an invisible character in a nickname is harmless&rdquo; is describing the appended
+    case and missing the prepended one, and the appended case is the easier one to produce.</p>
+
+  <h2>What this page does not tell you</h2>
+
+  <p>What any particular platform does. The measurements above are of the primitives that every
+    platform has to use, run in Chromium 153 and Node 22.22.2, and no real service was queried. A
+    platform that stores a nickname and draws it later can apply any of the four primitives, or its own,
+    or none; a platform that draws the avatar from the profile image instead never reaches the name at
+    all. Which one a given service does is not measured here and cannot be from the outside.</p>
+
+  <p>The characters are six of the many that render as nothing, chosen because they behave differently
+    from each other rather than because they are the complete set. The widths are from one font stack at
+    one size on one build; the ratios between the six are what the table is about, and the exact
+    hundredths will move with the font. Grapheme counts and code point counts come from
+    <code>Intl.Segmenter</code> with Unicode 17.0 as shipped in Node 22.22.2 and Chromium 153, and a
+    different Unicode version can split a cluster differently.</p>
+
+  <p class="crosslink">Measured 2026-10-08 in Chromium 153 via Playwright and Node 22.22.2
+    (<code>Intl.Segmenter</code>, ICU 78.2, Unicode 17.0), at a 16 px font in a 40 px avatar circle.
+    Related: <a href="/invisible-username">why a blank username still has to be unique</a>,
+    <a href="/invisible-characters">the full list of invisible characters</a>,
+    <a href="/invisible-letter">the four invisible characters that are real letters</a>,
+    <a href="/blank-text-message">why a space produces no message</a>,
+    <a href="/punycode">what IDNA does to a character in a domain name</a>,
+    <a href="/empty-character">why there is no empty character</a>, and
+    <a href="/compare-text">comparing two texts that look identical</a>.</p>
+
+  <footer class="foot">
+    <a href="/about">About</a> &middot; <a href="/privacy">Privacy</a> &middot; <a href="/contact">Contact</a> &middot; <a href="https://github.com/f6946672/stripinvisible/blob/main/invisible-nickname.html">Source</a>
+  </footer>
+</main>
+<script src="/list.js"></script>
+<script src="/invisible-nickname.js"></script>
+<!-- Cloudflare Web Analytics -->
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token":"20874485db814b21a0a76d82d7f9b4de"}'></script>
+</body>
+</html>

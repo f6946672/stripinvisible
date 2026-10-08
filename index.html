@@ -148,6 +148,11 @@
     you whether that was the whole difference &mdash; nothing leaves the browser tab.
     After an <a href="/invisible-username">invisible username</a>? Measured: NFKC collapses 23 blank
     names into 18, a trim erases 7 of them, and the pattern most username fields use refuses all 23.
+    An <a href="/invisible-nickname">invisible nickname</a> is drawn rather than matched:
+    measured in Chromium, the character in a 40 px avatar circle is 0.00 px for a zero-width
+    space and 16.00 px for a Hangul filler &mdash; wider than the 11.00 px capital A of a real
+    name &mdash; and a character on the end of the name changes neither the avatar nor the
+    letter.
     A character you cannot see in a <a href="/punycode">domain name</a>? Measured: IDNA deletes
     U+200B, U+00AD, U+FEFF and U+2060 outright, so <code>ap</code>+U+200B+<code>ple.com</code> and
     <code>apple.com</code> resolve as the same domain, while a look-alike letter is encoded to
