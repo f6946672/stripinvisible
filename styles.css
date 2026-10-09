@@ -155,6 +155,18 @@ textarea:focus, button:focus-visible, select:focus, input:focus {
   color: var(--muted);
 }
 
+input[type="text"] {
+  width: 100%;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.9rem;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--fg);
+  -webkit-appearance: none;
+}
+
 input[type="file"] {
   max-width: 100%;
   font-size: 0.8rem;

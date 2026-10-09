@@ -147,6 +147,111 @@
     </ul>
     <p>Paste the text above and this page marks each one where it sits, then removes it.</p>
 
+    <h2>Your font decides whether it stays invisible</h2>
+
+    <p>Nothing about <code>U+200B</code> makes it invisible. It is invisible because the font that ends
+      up serving it has a glyph for it that advances zero and paints nothing. Change which font serves
+      it and the answer can change &mdash; and on a page loading a web font, that choice is made before
+      the character is drawn at all, by one line of CSS.</p>
+
+    <p>A subsetted web font declares which code points it is willing to serve with
+      <code>unicode-range</code>. Four pages were rendered in the same browser with the same real font
+      file behind them, differing only in that one declaration:</p>
+
+    <div class="scroll">
+      <table>
+        <thead>
+          <tr><th>The <code>@font-face</code> declares</th><th>Text on the page</th><th>File fetched</th><th>What happened</th></tr>
+        </thead>
+        <tbody>
+          <tr><td class="nm"><code>unicode-range: U+0041</code></td><td class="nm">one <code>U+200B</code></td><td class="cp">0 bytes</td><td class="nm">drawn by the next family in the stack</td></tr>
+          <tr><td class="nm"><code>unicode-range: U+0041</code></td><td class="nm">1,000 <code>U+200B</code></td><td class="cp">0 bytes</td><td class="nm">1,000 glyphs, all from the fallback</td></tr>
+          <tr><td class="nm"><code>unicode-range: U+200B</code></td><td class="nm">one <code>U+200B</code></td><td class="cp">1,045,720 bytes</td><td class="nm">the file arrives, the line is 0.00 px wide</td></tr>
+          <tr><td class="nm">no <code>unicode-range</code> at all</td><td class="nm">one <code>U+200B</code></td><td class="cp">1,045,720 bytes</td><td class="nm">the file arrives, the line is 0.00 px wide</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>A thousand invisible characters and not one byte of the font; a single invisible character inside
+      the declared range and the whole file comes down. The range is matched on the code point alone. It
+      does not ask whether the character has a visible glyph, and it does not ask how many of them the
+      page is carrying.</p>
+
+    <p>Leaving it out breaks nothing. Developer tools report which family actually drew each run of
+      text, and in the first two rows above that family is the second name in the stack, not the web
+      font. The character arrives intact either way &mdash; it is simply being served by a font the page
+      never chose for it.</p>
+
+    <p>That is worth knowing because the obvious way to check gives the wrong answer.
+      <code>document.fonts.check("40px Face", "\u200B")</code> returns <code>true</code> whether
+      <code>U+200B</code> is inside the range or outside it: across the four rows above it was
+      <code>true</code> for a character no face had been asked to cover, and <code>false</code> for one
+      that had, at the moment the file was still arriving. The method reports the load state of the
+      faces that match. A character no face matches needs nothing loaded, so it passes.</p>
+
+    <h3>What the family in your CSS is actually worth</h3>
+
+    <p>On the machine these numbers come from the agreement is absolute. Twenty-two families named one
+      at a time, at sizes from 8 px to 96 px: <code>U+200B</code> advanced 0.00 px and painted nothing
+      in every one of them. In twenty-one of the twenty-two the family reported as having drawn it was
+      the family that was named; the exception was a Japanese family that is not installed here, where
+      the browser substituted a different one without saying so.</p>
+
+    <p>Substitution is the ordinary case for other members of the same set. Ask any of those twenty-two
+      families for <code>U+3164</code>, the Hangul filler, and all twenty-two are answered by the same
+      Korean font, which gives it a full em &mdash; 64 px at 64 px, 16 px at 16 px &mdash; while
+      painting nothing. Ask for <code>U+070F</code> and all twenty-two are answered by a historic-script
+      font, whatever you named. The family in your stylesheet is a request, not a guarantee.</p>
+
+    <p>When nothing on the device has the code point at all, what gets drawn is the font&rsquo;s own
+      replacement glyph, and that is not a standard shape either. Measured at 64 px against a code
+      point no font defines:</p>
+
+    <div class="scroll">
+      <table>
+        <thead>
+          <tr><th>Family asked for</th><th>Advance</th><th>Painted pixels</th></tr>
+        </thead>
+        <tbody>
+          <tr><td class="nm">Wingdings</td><td class="cp">32.00 px</td><td class="cp">664</td></tr>
+          <tr><td class="nm">Calibri</td><td class="cp">32.44 px</td><td class="cp">655</td></tr>
+          <tr><td class="nm">Courier New</td><td class="cp">38.41 px</td><td class="cp">253</td></tr>
+          <tr><td class="nm">Symbol</td><td class="cp">38.41 px</td><td class="cp">258</td></tr>
+          <tr><td class="nm">Segoe UI</td><td class="cp">41.31 px</td><td class="cp">785</td></tr>
+          <tr><td class="nm">Microsoft YaHei</td><td class="cp">44.63 px</td><td class="cp">864</td></tr>
+          <tr><td class="nm">Arial</td><td class="cp">48.00 px</td><td class="cp">358</td></tr>
+          <tr><td class="nm">Tahoma</td><td class="cp">64.00 px</td><td class="cp">880</td></tr>
+          <tr><td class="nm">MS Gothic</td><td class="cp">64.00 px</td><td class="cp">1,032</td></tr>
+          <tr><td class="nm">SimSun</td><td class="cp">64.00 px</td><td class="cp">0</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>So the box people report seeing is not one thing. It runs from half an em to a full em, and in
+      one family here it reserves a whole character cell and paints nothing at all &mdash; a gap the
+      width of a character with no mark in it. A device whose fonts differ from the ones measured here
+      can substitute a drawn glyph for a character that is invisible on this one, and the character
+      itself never changed.</p>
+
+    <div class="pane">
+      <label for="fname">Ask a font on this device what it does with the invisible set</label>
+      <input id="fname" type="text" value="system-ui" spellcheck="false" placeholder="e.g. Georgia">
+      <div class="row">
+        <button id="fmeasure" type="button">Measure</button>
+      </div>
+      <div id="fout" class="scroll"></div>
+      <p class="hint">Measured in this tab on a canvas at 64 px: how far the caret moves, and how many
+        pixels get painted. The last row is the control &mdash; a code point no font defines, so what it
+        shows is that family&rsquo;s replacement glyph. Which family really drew each one is something
+        the browser only reports to developer tools.</p>
+    </div>
+
+    <p>If you ship a subsetted font, the decision is worth making on purpose rather than inheriting.
+      Left out, <code>U+200B</code> costs nothing to render and is handed to whatever family comes next,
+      which for a zero-advance character changes nothing you can see. Included, every page that carries
+      one downloads a file for a glyph that is never painted. And none of this touches the copy: the
+      character rides along in the clipboard whichever family drew it.</p>
+
     <h2>Which removal recipe actually removes it</h2>
 
     <p>Line up the fifteen invisible characters a piece of text is most likely to be carrying and run the
@@ -227,6 +332,7 @@
 </main>
 <script src="/core.js"></script>
 <script src="/zwsp.js"></script>
+<script src="/zwsp-font.js"></script>
 <!-- Cloudflare Web Analytics -->
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token":"20874485db814b21a0a76d82d7f9b4de"}'></script>
 </body>
