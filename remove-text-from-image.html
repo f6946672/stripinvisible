@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Remove Text from Image: What a Patch Leaves Behind, Measured</title>
+<meta name="description" content="Removing text from an image is reconstruction, not deletion, and both whether the text is there and whether the removal worked are one number: how far those pixels sit from the background. Measured in Chromium 153 on a 480 &times; 220 canvas: 2,745 glyph pixels stay fully recoverable at a contrast of 1/255, the threshold is twice the background's own variation plus one, and the three ordinary ways of clearing a box leave 5, 130 and 2 on a background that varies by 5.">
+<link rel="canonical" href="https://stripinvisible.com/remove-text-from-image">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Remove Text from Image: What a Patch Leaves Behind, Measured">
+<meta property="og:description" content="One number decides both directions: how far a glyph sits from the background (is the text there?) and how far the patch sits from it (did the removal work?). Measured in Chromium 153, and the threshold is the background's own variation, not the tool.">
+<meta property="og:url" content="https://stripinvisible.com/remove-text-from-image">
+<meta name="twitter:card" content="summary">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/styles.css">
+<style>
+.rt-stage { position: relative; border: 1px solid var(--line); border-radius: 8px; overflow: hidden;
+  margin-top: 10px; background: #fff; }
+.rt-stage canvas { display: block; width: 100%; height: auto; cursor: crosshair; touch-action: none; }
+#rtoverlay { position: absolute; top: 0; left: 0; pointer-events: none; cursor: default; }
+.rt-facts { margin: 10px 0 0; padding: 0; list-style: none; font-size: 0.82rem; }
+.rt-facts li { display: flex; justify-content: space-between; gap: 12px; padding: 3px 0;
+  border-bottom: 1px solid var(--line); }
+.rt-facts b { font-weight: 600; font-variant-numeric: tabular-nums; }
+</style>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebPage",
+      "@id": "https://stripinvisible.com/remove-text-from-image",
+      "url": "https://stripinvisible.com/remove-text-from-image",
+      "name": "Remove Text from Image: What a Patch Leaves Behind, Measured",
+      "description": "Removing text from an image is pixel reconstruction, and both whether the text was there and whether the removal worked are the same measurement: how far those pixels sit from the background. Measured in Chromium 153."
+    },
+    {
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "Strip Invisible", "item": "https://stripinvisible.com/" },
+        { "@type": "ListItem", "position": 2, "name": "Remove text from image", "item": "https://stripinvisible.com/remove-text-from-image" }
+      ]
+    },
+    {
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "How do I remove text from an image?",
+          "acceptedAnswer": { "@type": "Answer", "text": "You do not remove the text, because the characters are already gone &mdash; an image holds pixels, not characters. What you do is replace the pixels the text occupied with pixels that pass for the background behind it. Measured in Chromium 153 over a 228 &times; 46 box, the three ordinary ways of doing that differ enormously in what they leave on a background that varies by 5: filling the box with one sampled colour leaves a worst-case difference of 5, blurring it in place leaves 130, and interpolating between the left and right edges leaves 2." }
+        },
+        {
+          "@type": "Question",
+          "name": "Does removing text from an image leave a visible patch?",
+          "acceptedAnswer": { "@type": "Answer", "text": "It depends on the background, not on the tool. Measured against the true background on three backgrounds that vary by 0, 5 and 6, a single sampled colour leaves 0, 5 and 6, while interpolating leaves 0, 2 and 12. A patch stops being visible when what it leaves is no larger than the background's own variation, so the same method that is invisible on one picture is visible on the next &mdash; and interpolating, which is the better of the two on a gradient, is the worse of the two on noise." }
+        },
+        {
+          "@type": "Question",
+          "name": "Can text in an image be invisible and still be there?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Yes, and completely. Measured in Chromium 153, text drawn only 1/255 away from a flat background &mdash; the smallest difference an 8-bit image can hold &mdash; still occupies all 2,745 of the pixels the full-contrast version occupies, and scaling the difference back up recovers 100 per cent of them. Nothing is lost at the floor. What makes such text unfindable in practice is not the contrast but the background: the glyph has to differ from the background by more than the background differs from itself, and by more than twice as much if it is sitting on the low side of it." }
+        },
+        {
+          "@type": "Question",
+          "name": "What contrast does text need before it can be found in an image?",
+          "acceptedAnswer": { "@type": "Answer", "text": "One more than twice the background's own maximum deviation, measured across six noise amplitudes. With a background that does not vary at all the whole glyph is recoverable at a difference of 1; a background that varies by 1 needs 3, by 2 needs 5, by 4 needs 9, by 8 needs 17 and by 16 needs 33. At exactly twice the spread, 649 of the 2,745 glyph pixels on the first of those backgrounds still fall back inside it, because a glyph pixel carries the background's own offset as well as the contrast, and the worst pixel is the one sitting on the lowest part of the background." }
+        },
+        {
+          "@type": "Question",
+          "name": "Is removing text from an image the same as removing a watermark?",
+          "acceptedAnswer": { "@type": "Answer", "text": "The operation is the same and the target is not. Both replace a region of pixels with something that has to pass for the background, so both are governed by the same number; they differ in what is in the region, which decides how much of the background is missing and therefore how hard the reconstruction is. This page measures the pixels side, which is the part that does not depend on what the text said." }
+        }
+      ]
+    }
+  ]
+}
+</script>
+</head>
+<body>
+<main>
+
+  <nav class="crumbs" aria-label="Breadcrumb">
+    <a href="/">Strip Invisible</a> &rsaquo; <span>Remove text from image</span>
+  </nav>
+
+  <h1>Remove text from image: what the patch leaves behind is the whole question</h1>
+
+  <p class="lede"><strong>Short answer:</strong> by the time you have an image there are no characters left
+    to remove &mdash; there are pixels, and the pixels the text occupied have to be replaced with
+    something that passes for the background that was behind it. So the question is not whether the text
+    is gone, it is whether the patch shows. Measured in Chromium 153, that is one number: the deepest
+    difference the patch still has against the background around it. Over a 228 &times; 46 box on a
+    background that varies by <strong>5</strong>, filling it with one sampled colour leaves
+    <strong>5</strong>, blurring it in place leaves <strong>130</strong> and interpolating across it
+    leaves <strong>2</strong>. The threshold that decides whether that matters is not fixed either
+    &mdash; it is the background's own variation, and the same measurement in the other direction says
+    whether text is in the picture at all: a glyph is still <strong>fully recoverable</strong> at a
+    contrast of <strong>1/255</strong>, the smallest an 8-bit image can hold, and it needs
+    <strong>one more than twice</strong> the background's variation before the whole of it clears.</p>
+
+  <section class="tool">
+    <div class="pane">
+      <label for="rtfile">Load an image, then drag a box over the text</label>
+      <input id="rtfile" type="file" accept="image/*">
+      <p class="row meta">Or start from a sample, then put the box on the text in one click:
+        <button type="button" class="grabbtn" data-rtsample="flat">flat background</button>
+        <button type="button" class="grabbtn" data-rtsample="gradient">gradient</button>
+        <button type="button" class="grabbtn" data-rtsample="noisy">noisy</button>
+        <button type="button" class="grabbtn" data-rtselect="text">select the text</button>
+      </p>
+      <p class="row meta">Then erase what is inside the box:
+        <button type="button" class="grabbtn" data-rterase="flat">one sampled colour</button>
+        <button type="button" class="grabbtn" data-rterase="blur">blur</button>
+        <button type="button" class="grabbtn" data-rterase="interp">interpolate</button>
+        <button type="button" class="grabbtn" data-rtreset="1">reset</button>
+      </p>
+    </div>
+    <div class="pane">
+      <label for="rtcanvas">What this browser measures in the box</label>
+      <div class="rt-stage"><canvas id="rtcanvas" width="480" height="220"></canvas><canvas id="rtoverlay" width="480" height="220"></canvas></div>
+      <ul class="rt-facts" id="rtfacts"></ul>
+      <p id="rtverdict" class="verdict idle">Pick a sample or load a picture, then drag a box over the text in it.</p>
+      <p class="row meta">Every row is a reading this browser takes from your own pixels: the box and the
+        ring around it are read straight off the canvas, and the erase buttons are three plain canvas
+        operations. The samples carry a copy of their own background without the text on it, so those
+        readings are the numbers quoted below; a picture you load has no such copy, so there the
+        reading is taken against a straight line fitted across the box, and the tool reports the two
+        readings and the share between them rather than a verdict &mdash; the background in a loaded
+        picture cannot be measured cleanly enough to set one.</p>
+    </div>
+  </section>
+
+  <h2>One number, both directions</h2>
+
+  <p>Text in an image and the removal of text from an image are the same question asked twice, and both
+    times it is asked in pixels. To know whether there is text in a region you ask how far the pixels in
+    that region sit from the background. To know whether a removal worked you ask how far the pixels
+    that replaced them sit from the background. It is one measurement taken before and after, and the
+    only thing that changes is which side of the threshold you want to be on: above it, and the text is
+    there; below it, and the patch is invisible.</p>
+
+  <p>That is why the two halves of this page belong together, and why a number is worth having at all.
+    The word the tooling around this uses for the second half is <em>seamless</em>, and the eight
+    tool pages that rank for this term carry no measurement of it between them &mdash; not in their
+    titles and not in their descriptions. So the rest of this page is the number, in both directions,
+    and what moves it.</p>
+
+  <h2>Text is still fully there at 1/255</h2>
+
+  <p>Start with the direction that surprises people. An 8-bit image cannot express a difference smaller
+    than 1, so 1 is the floor: text drawn one step away from the background is as invisible as text in an
+    image can be. It is not, however, absent. Measured in Chromium 153 on a 480 &times; 220 canvas, with
+    <code>Sample text</code> at 600 40px Arial on a flat background of 240 and a 228 &times; 46 box
+    around it, the glyph occupies <strong>2,745 pixels</strong> at full contrast, and it occupies
+    <strong>the same 2,745 pixels at a difference of 1</strong>. Scaling the difference back up by 255
+    recovers <strong>100 per cent</strong> of them, at every contrast on the way down.</p>
+
+  <div class="scroll">
+    <table>
+      <thead>
+        <tr><th>Contrast the text is drawn at</th><th>Deepest difference in the render</th><th>Glyph pixels present</th><th>Recovered by scaling the difference up</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="cp">1/255</td><td class="cp">1</td><td class="cp">2,745 of 2,745</td><td class="cp"><strong>100%</strong></td></tr>
+        <tr><td class="cp">2/255</td><td class="cp">2</td><td class="cp">2,745 of 2,745</td><td class="cp">100%</td></tr>
+        <tr><td class="cp">4/255</td><td class="cp">4</td><td class="cp">2,745 of 2,745</td><td class="cp">100%</td></tr>
+        <tr><td class="cp">16/255</td><td class="cp">16</td><td class="cp">2,745 of 2,745</td><td class="cp">100%</td></tr>
+        <tr><td class="cp">64/255</td><td class="cp">64</td><td class="cp">2,745 of 2,745</td><td class="cp">100%</td></tr>
+        <tr><td class="cp">full (text at 0)</td><td class="cp">240</td><td class="cp">2,745 of 2,745</td><td class="cp">100%</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>The row worth stopping on is the first. There is no contrast at which the glyph thins out or loses
+    its faintest edges, because the anti-aliasing that softens an edge is itself a difference, and at a
+    difference of 1 the softness survives as a difference of 1. What the floor costs you is not
+    information, it is the ability to notice: nothing on a screen shows a step of 1 as anything other
+    than the same colour. So a picture can carry text that no one looking at it can see, and the file
+    holds all of it.</p>
+
+  <h2>The threshold is twice the background's own variation</h2>
+
+  <p>Which raises the obvious follow-up: if 1 is enough, why is text ever unrecoverable? Because a real
+    background is not one value. It is a field that varies, and a glyph only stands out from it while it
+    differs from it by more than the field differs from itself. Measured over six noise amplitudes, with
+    the same 2,745-pixel glyph, the smallest contrast at which every pixel of the glyph clears the
+    background is one more than <em>twice</em> the background's own maximum deviation:</p>
+
+  <div class="scroll">
+    <table>
+      <thead>
+        <tr><th>Background's own variation</th><th>Smallest recoverable contrast</th><th>Same glyph recoverable?</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="cp">0</td><td class="cp">1</td><td class="cp">100%</td></tr>
+        <tr><td class="cp">1</td><td class="cp">3</td><td class="cp">100%</td></tr>
+        <tr><td class="cp">2</td><td class="cp">5</td><td class="cp">100%</td></tr>
+        <tr><td class="cp">4</td><td class="cp">9</td><td class="cp">100%</td></tr>
+        <tr><td class="cp">8</td><td class="cp">17</td><td class="cp">100%</td></tr>
+        <tr><td class="cp">16</td><td class="cp">33</td><td class="cp">100%</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>The factor of two is not slack in the measurement, and it is worth spelling out because it is the
+    part that decides whether text survives in a picture. A glyph pixel is not painted onto a blank
+    sheet: it replaces a background pixel, so what a reader can recover from it is the contrast
+    <em>plus whatever the background was already doing there</em>. The glyph has to clear the
+    background's own spread, and the worst pixel in the glyph is the one sitting on the lowest part of
+    that spread, where the background is working against the contrast rather than with it. Measured at
+    exactly twice the spread, 649 of the 2,745 pixels are still inside the background; one step higher
+    and all of them are out.</p>
+
+  <p>The practical reading is that the same invisible text is plainly written on a flat fill and
+    genuinely gone on a photograph, and that nothing about the text changed &mdash; only the picture it
+    was written on. It also means the useful question is never &ldquo;how faint can text be&rdquo; but
+    &ldquo;how faint can it be and still beat this particular background&rdquo;, which is a question
+    about the picture rather than about the text.</p>
+
+  <h2>What each way of removing it leaves behind</h2>
+
+  <p>Now the other direction, and it is the same number. The three ordinary ways of clearing a region are
+    to fill it with one colour sampled from nearby, to blur it in place, and to interpolate across it
+    from the edges. Each was run over the same box of text on three backgrounds, and the result is the
+    deepest difference between the patched region and the background that was actually behind the text
+    &mdash; that is, what a viewer would see as the patch:</p>
+
+  <div class="scroll">
+    <table>
+      <thead>
+        <tr><th>How the region is cleared</th><th>Flat background<br>(varies by 0)</th><th>Gradient<br>(varies by 5)</th><th>Noisy<br>(varies by 6)</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="nm">One sampled colour</td><td class="cp">0</td><td class="cp">5</td><td class="cp">6</td></tr>
+        <tr><td class="nm">Blur in place</td><td class="cp">126</td><td class="cp">130</td><td class="cp">131</td></tr>
+        <tr><td class="nm">Interpolate from the edges</td><td class="cp"><strong>0</strong></td><td class="cp"><strong>2</strong></td><td class="cp">12</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>Three things fall out of that table. The first is that blurring is not a removal at all: at 126 to
+    131 it leaves a difference larger than the text it was covering, so it replaces something you could
+    read with something you can see. The second is that interpolating beats a flat fill on a background
+    that varies in one direction and loses to it on one that varies in every direction &mdash; 2 against
+    5 on the gradient, 12 against 6 on the noise &mdash; because a straight line drawn across a noisy
+    region is a smooth band, and a smooth band is exactly what noise is not. The third is that the flat
+    fill lands on the background's own variation and stops there: 5 where the background varies by 5, 6
+    where it varies by 6, and 0 where it does not vary at all.</p>
+
+  <p>The connection to the previous section is what decides whether any of this shows. A patch of 6 is
+    invisible on a background that varies by 16 and obvious on one that varies by 2, because visibility
+    is a comparison rather than a value. That is why the same tool produces a clean result on one
+    picture and a smear on the next, and why &ldquo;seamless&rdquo; is not a property a tool has. It is
+    a property of a tool against a particular background, and the only way to know which you have is to
+    measure the picture you are actually working on &mdash; which is what the box above does.</p>
+
+  <h2>What this page does not tell you</h2>
+
+  <p>How any particular tool works. Every number here was produced by this browser drawing into a canvas
+    and reading the pixels back, and no service was queried. A tool that reconstructs a region from a
+    learned model is not doing any of the three operations above and can beat all three of them; what it
+    cannot do is change what counts as clean, because that is set by the picture it was handed.</p>
+
+  <p>The measurements are one string at one size and weight in one font stack, and the 2,745 pixels are
+    a property of that string at that size, not a constant. The noisy background is uniform noise at a
+    known amplitude rather than a photograph, which is structured; structure is what a reconstruction
+    can exploit and uniform noise is the case where it has nothing to work with, so a photograph will
+    generally land between the gradient column and the noisy one. The comparison between the three
+    methods is the point of the table, and the exact figures will move with the text, the box and the
+    background.</p>
+
+  <p class="crosslink">Measured 2026-10-09 in Chromium 153 via Playwright, canvas 2D, on a 480 &times; 220
+    canvas with <code>Sample text</code> at 600 40px Arial drawn at (40, 90) and a 228 &times; 46 box,
+    the same setup the tool above uses on its samples. Related:
+    <a href="/invisible-characters">the full list of invisible characters</a>,
+    <a href="/hidden-text">text that is hidden on a page rather than in a picture</a>,
+    <a href="/invisible-letter">the four invisible characters that are real letters</a>,
+    <a href="/clean-word">cleaning characters out of document text</a>,
+    <a href="/compare-text">comparing two texts that look identical</a>, and
+    <a href="/">stripping the invisible characters out of copied text</a>.</p>
+
+  <footer class="foot">
+    <a href="/about">About</a> &middot; <a href="/privacy">Privacy</a> &middot; <a href="/contact">Contact</a> &middot; <a href="https://github.com/f6946672/stripinvisible/blob/main/remove-text-from-image.html">Source</a>
+  </footer>
+</main>
+<script src="/list.js"></script>
+<script src="/remove-text-from-image.js"></script>
+<!-- Cloudflare Web Analytics -->
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token":"20874485db814b21a0a76d82d7f9b4de"}'></script>
+</body>
+</html>

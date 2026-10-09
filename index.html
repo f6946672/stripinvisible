@@ -156,7 +156,12 @@
     A character you cannot see in a <a href="/punycode">domain name</a>? Measured: IDNA deletes
     U+200B, U+00AD, U+FEFF and U+2060 outright, so <code>ap</code>+U+200B+<code>ple.com</code> and
     <code>apple.com</code> resolve as the same domain, while a look-alike letter is encoded to
-    <code>xn--</code> and two characters get three different answers from Python, Node and Chromium.</p>
+    <code>xn--</code> and two characters get three different answers from Python, Node and Chromium.
+    Text baked into a picture rather than a page? Removing
+    <a href="/remove-text-from-image">text from an image</a> is reconstruction, not deletion, and the
+    same measurement answers both directions: over a 228 &times; 46 box on a background that varies by
+    5, one sampled colour leaves 5, blurring it in place leaves 130 and interpolating leaves 2, while
+    text drawn 1/255 away from a flat background still occupies all 2,745 of its pixels.</p>
 
   <section class="tool">
 
