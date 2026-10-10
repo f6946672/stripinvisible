@@ -41,6 +41,16 @@
   var TEXT = 'Sample text';
   var TEXT_AT = [40, 90];
 
+  // A watermark is a blend, not a replacement: a pixel under it holds (1 - a) of the
+  // background plus a of the mark. WM_BOX and WM colour are the same ones the tables
+  // on the page quote, so the tool and the page read the same numbers.
+  var WM_BOX = { x: 40, y: 90, w: 228, h: 46 };
+  var WM = [30, 30, 30];
+  var markMode = 'opaque';   // 'opaque' = the text above, 'blend' = a translucent patch
+  var alpha = 0.5;           // how strong the blend is
+  var estAlpha = null;       // the strength read back off the picture
+  var alphaSel = document.getElementById('rtalpha');
+
   // --- samples -----------------------------------------------------------
 
   function paintBackground(g, kind) {
@@ -71,24 +81,38 @@
     g.putImageData(img, 0, 0);
   }
 
+  var currentKind = 'flat';
+
   function loadSample(kind) {
+    currentKind = kind;
     paintBackground(bgctx, kind);
     trueBg = bgctx.getImageData(0, 0, W, H);
 
     ctx.clearRect(0, 0, W, H);
     ctx.drawImage(bg, 0, 0);
-    ctx.font = FONT;
-    ctx.textBaseline = 'top';
-    ctx.fillStyle = 'rgb(30,30,30)';
-    ctx.fillText(TEXT, TEXT_AT[0], TEXT_AT[1]);
 
-    var m = ctx.measureText(TEXT);
-    textBox = {
-      x: Math.max(0, TEXT_AT[0] - 3),
-      y: Math.max(0, TEXT_AT[1] - 3),
-      w: Math.min(W, Math.ceil(m.width) + 6),
-      h: Math.min(H, 40 + 6),
-    };
+    if (markMode === 'blend') {
+      // one flat translucent patch over the same box the tables quote
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = 'rgb(' + WM[0] + ',' + WM[1] + ',' + WM[2] + ')';
+      ctx.fillRect(WM_BOX.x, WM_BOX.y, WM_BOX.w, WM_BOX.h);
+      ctx.globalAlpha = 1;
+      textBox = { x: WM_BOX.x, y: WM_BOX.y, w: WM_BOX.w, h: WM_BOX.h };
+    } else {
+      ctx.font = FONT;
+      ctx.textBaseline = 'top';
+      ctx.fillStyle = 'rgb(30,30,30)';
+      ctx.fillText(TEXT, TEXT_AT[0], TEXT_AT[1]);
+
+      var m = ctx.measureText(TEXT);
+      textBox = {
+        x: Math.max(0, TEXT_AT[0] - 3),
+        y: Math.max(0, TEXT_AT[1] - 3),
+        w: Math.min(W, Math.ceil(m.width) + 6),
+        h: Math.min(H, 40 + 6),
+      };
+    }
+    estAlpha = null;
 
     original = ctx.getImageData(0, 0, W, H);
     sel = null;
@@ -112,6 +136,33 @@
   }
 
   // --- the one measurement this page is about ----------------------------
+
+  // Blending scales the variation down along with the values: the spread of the pixels
+  // under the mark is (1 - a) times the spread of the same patch without it. That gives
+  // the strength back without being told it, provided there is texture there to compare.
+  function sdOver(g, x, y, w, h) {
+    var d = g.getImageData(x, y, w, h).data;
+    var s = 0, s2 = 0, n = 0;
+    for (var i = 0; i < d.length; i += 4) {
+      for (var c = 0; c < 3; c++) { var v = d[i + c]; s += v; s2 += v * v; n++; }
+    }
+    var mean = s / n;
+    return Math.sqrt(Math.max(0, s2 / n - mean * mean));
+  }
+
+  function readStrength() {
+    if (!trueBg || !sel) return alpha;
+    var bgC = document.createElement('canvas');
+    bgC.width = W; bgC.height = H;
+    var bgG = bgC.getContext('2d', { willReadFrequently: true });
+    bgG.putImageData(trueBg, 0, 0);
+    var sb = sdOver(bgG, sel.x, sel.y, sel.w, sel.h);
+    var sc = sdOver(ctx, sel.x, sel.y, sel.w, sel.h);
+    if (!(sb > 0) || !(sc > 0)) return alpha;
+    var a = 1 - sc / sb;
+    if (!(a > 0.02) || !(a < 0.995)) return alpha;
+    return a;
+  }
 
   function median(values) {
     values.sort(function (a, b) { return a - b; });
@@ -258,6 +309,13 @@
     }
 
     facts.appendChild(line('Background\u2019s own variation', st.bgSpread + ' / 255'));
+    if (markMode === 'blend') {
+      facts.appendChild(line('Strength of the mark', alpha + ''));
+      if (estAlpha !== null) {
+        facts.appendChild(line('Strength read off the picture',
+          estAlpha.toFixed(4) + ' (true ' + alpha + ')'));
+      }
+    }
     facts.appendChild(line('Deepest difference left by the patch',
       patchMax === null ? 'nothing erased yet' : patchMax + ' / 255'));
     if (patchMax !== null && st.bgSpread > 0) {
@@ -354,6 +412,32 @@
       ctx.drawImage(canvas, sel.x, sel.y, sel.w, sel.h, sel.x, sel.y, sel.w, sel.h);
       ctx.restore();
     },
+    invert: function () {
+      var a = alpha;
+      estAlpha = null;
+      var data = ctx.getImageData(sel.x, sel.y, sel.w, sel.h);
+      var d = data.data;
+      for (var i = 0; i < d.length; i += 4) {
+        for (var c = 0; c < 3; c++) {
+          var v = (d[i + c] - a * WM[c]) / (1 - a);
+          d[i + c] = Math.max(0, Math.min(255, Math.round(v)));
+        }
+      }
+      ctx.putImageData(data, sel.x, sel.y);
+    },
+    invertest: function () {
+      var a = readStrength();
+      estAlpha = a;
+      var data = ctx.getImageData(sel.x, sel.y, sel.w, sel.h);
+      var d = data.data;
+      for (var i = 0; i < d.length; i += 4) {
+        for (var c = 0; c < 3; c++) {
+          var v = (d[i + c] - a * WM[c]) / (1 - a);
+          d[i + c] = Math.max(0, Math.min(255, Math.round(v)));
+        }
+      }
+      ctx.putImageData(data, sel.x, sel.y);
+    },
     interp: function () {
       var data = ctx.getImageData(0, 0, W, H);
       var d = data.data;
@@ -378,13 +462,40 @@
       // every erase starts from the same picture, so the reading does not depend on
       // how many times the buttons have been pressed before
       ctx.putImageData(original, 0, 0);
-      erasers[btn.getAttribute('data-rterase')]();
+      // undoing a blend needs the strength, and a loaded picture carries no clean copy
+      // to read one off; there the two invert buttons fall back to nothing
+      var how = btn.getAttribute('data-rterase');
+      if ((how === 'invert' || how === 'invertest') && (!trueBg || markMode !== 'blend')) {
+        say('The blend buttons work on the blended samples, where the strength is known and the '
+          + 'sample carries a clean copy of its own background to read one off. Load a sample first.',
+          'idle');
+        outline();
+        run();
+        return;
+      }
+      erasers[how]();
       var st = stats();
       patchMax = st ? st.boxMax : null;
       outline();
       run();
     });
   });
+
+  Array.prototype.forEach.call(document.querySelectorAll('button[data-rtmark]'), function (btn) {
+    btn.addEventListener('click', function () {
+      markMode = btn.getAttribute('data-rtmark');
+      if (alphaSel) alpha = parseFloat(alphaSel.value) || 0.5;
+      loadSample(currentKind);
+    });
+  });
+
+  if (alphaSel) {
+    alphaSel.addEventListener('change', function () {
+      alpha = parseFloat(alphaSel.value) || 0.5;
+      if (markMode === 'blend') loadSample(currentKind);
+      run();
+    });
+  }
 
   Array.prototype.forEach.call(document.querySelectorAll('button[data-rtreset]'), function (btn) {
     btn.addEventListener('click', function () {
@@ -431,6 +542,8 @@
           ctx.drawImage(im, Math.round((W - w) / 2), Math.round((H - h) / 2), w, h);
           trueBg = null;
           textBox = null;
+          estAlpha = null;
+          markMode = 'opaque';
           picRect = {
             x: Math.round((W - w) / 2),
             y: Math.round((H - h) / 2),

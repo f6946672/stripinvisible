@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Remove Text from Image: What a Patch Leaves Behind, Measured</title>
-<meta name="description" content="Removing text from an image is reconstruction, not deletion, and both whether the text is there and whether the removal worked are one number: how far those pixels sit from the background. Measured in Chromium 153 on a 480 &times; 220 canvas: 2,745 glyph pixels stay fully recoverable at a contrast of 1/255, the threshold is twice the background's own variation plus one, and the three ordinary ways of clearing a box leave 5, 130 and 2 on a background that varies by 5.">
+<meta name="description" content="Removing text from an image is reconstruction, not deletion, and both whether the text is there and whether the removal worked are one number: how far those pixels sit from the background. Measured in Chromium 153 on a 480 &times; 220 canvas: 2,745 glyph pixels stay fully recoverable at a contrast of 1/255, the threshold is twice the background's own variation plus one, and the three ordinary ways of clearing a box interpolating between the left and right edges leaves 2 on a background that varies by 5. A watermark is the other case: it is blended into the picture rather than painted over it, so undoing the blend is arithmetic, and measured here it is exact to 1 of 255 at a strength of 0.25 but 15 out when the strength is wrong by one hundredth.">
 <link rel="canonical" href="https://stripinvisible.com/remove-text-from-image">
 <meta property="og:type" content="article">
 <meta property="og:title" content="Remove Text from Image: What a Patch Leaves Behind, Measured">
@@ -66,6 +66,11 @@
         },
         {
           "@type": "Question",
+          "name": "Is an AI watermark remover doing something different from removing text?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Yes, because a watermark is usually blended into the picture rather than painted over it: every pixel under it keeps (1 minus the strength) of the background, so the background can be recovered by dividing the blend back out instead of being invented. Measured in Chromium 153 over a 228 by 46 box, undoing the blend with the true strength leaves 1 of 255 at a strength of 0.25 and 0 at 0.5, while being wrong about the strength by one hundredth leaves 1 at a strength of 0.1 but 15 at 0.9 &mdash; and an overlay whose strength varies across the patch, undone with its own average, leaves 126. Text sits at full strength, where none of the background survives and the pixels have to be invented." }
+        },
+        {
+          "@type": "Question",
           "name": "Is removing text from an image the same as removing a watermark?",
           "acceptedAnswer": { "@type": "Answer", "text": "The operation is the same and the target is not. Both replace a region of pixels with something that has to pass for the background, so both are governed by the same number; they differ in what is in the region, which decides how much of the background is missing and therefore how hard the reconstruction is. This page measures the pixels side, which is the part that does not depend on what the text said." }
         }
@@ -112,6 +117,19 @@
         <button type="button" class="grabbtn" data-rterase="blur">blur</button>
         <button type="button" class="grabbtn" data-rterase="interp">interpolate</button>
         <button type="button" class="grabbtn" data-rtreset="1">reset</button>
+      </p>
+      <p class="row meta">Or draw the mark as something blended into the picture instead, and undo the
+        blend rather than guess at it:
+        <button type="button" class="grabbtn" data-rtmark="opaque">opaque text</button>
+        <button type="button" class="grabbtn" data-rtmark="blend">a blended mark</button>
+        <select id="rtalpha" aria-label="Strength of the blended mark">
+          <option value="0.25">strength 0.25</option>
+          <option value="0.5" selected>strength 0.5</option>
+          <option value="0.75">strength 0.75</option>
+          <option value="0.9">strength 0.9</option>
+        </select>
+        <button type="button" class="grabbtn" data-rterase="invert">undo the blend</button>
+        <button type="button" class="grabbtn" data-rterase="invertest">undo it, strength read off the picture</button>
       </p>
     </div>
     <div class="pane">
@@ -253,6 +271,83 @@
     a property of a tool against a particular background, and the only way to know which you have is to
     measure the picture you are actually working on &mdash; which is what the box above does.</p>
 
+  <h2 id="ai-watermark-remover">AI watermark remover: a mark is mixed into the picture, not painted over it</h2>
+
+  <p>The word in front of the tool is doing two different jobs, and only one of them needs a model. A
+    watermark is not a patch of different pixels sitting on top of a picture; it is the picture,
+    scaled down and mixed with one colour. Every pixel under it holds <em>(1 &minus; a)</em> of the
+    background plus <em>a</em> of the mark, where <em>a</em> is how strong the mark is at that pixel.
+    At <em>a</em> = 1 the background is gone and the only way forward is to invent pixels. At anything
+    below that the background is still in the file, and getting it back is arithmetic rather than
+    imagination: <em>background = (pixel &minus; a &times; mark colour) &divide; (1 &minus; a)</em>.</p>
+
+  <div class="scroll">
+    <table>
+      <thead>
+        <tr><th>Strength of the mark</th><th>Background still in the pixel</th><th>How far the mark moves it</th><th>Left after undoing the blend</th><th>Left if the strength is wrong by 0.01</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="cp">0.10</td><td class="cp">90%</td><td class="cp">22</td><td class="cp">1</td><td class="cp">1</td></tr>
+        <tr><td class="cp">0.25</td><td class="cp">75%</td><td class="cp">52</td><td class="cp"><strong>1</strong></td><td class="cp">4</td></tr>
+        <tr><td class="cp">0.50</td><td class="cp">50%</td><td class="cp">105</td><td class="cp"><strong>0</strong></td><td class="cp">4</td></tr>
+        <tr><td class="cp">0.75</td><td class="cp">25%</td><td class="cp">158</td><td class="cp">2</td><td class="cp">7</td></tr>
+        <tr><td class="cp">0.90</td><td class="cp">10%</td><td class="cp">189</td><td class="cp"><strong>0</strong></td><td class="cp"><strong>15</strong></td></tr>
+        <tr><td class="nm">1.00 (opaque)</td><td class="cp">0%</td><td class="cp">210</td><td class="cp">nothing left to undo</td><td class="cp">&mdash;</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>Measured in Chromium 153 over the same 228 &times; 46 box the rest of this page uses, on the flat
+    sample with a background of 240 and a mark colour of 30. Two things in that table are worth
+    stopping on. The first is the row at 0.75: the blend lands on 82.5, an 8-bit pixel has to write 82,
+    and dividing by <em>(1 &minus; a)</em> turns that half-step into a whole 2 &mdash; the same
+    rounding at a strength of 0.5 costs nothing, because there the blend lands on a whole number. The
+    second is the last column: being wrong about the strength by one hundredth leaves 1 of 255 at 0.1
+    and <strong>15</strong> at 0.9, because what the mistake is multiplied by is the gap between the
+    background and the mark colour, divided by how little of the background is left. The arithmetic is
+    exact and unforgiving at the same time.</p>
+
+  <p>It is also per pixel, and that is what decides whether it can be used at all. An overlay whose
+    strength runs from 0.2 on one side to 0.8 on the other &mdash; which is what the soft edge of a
+    logo is &mdash; undone with one number, its own average of 0.5, leaves <strong>126</strong> of
+    255. Undone with the strength of each column, the same formula leaves <strong>5</strong>. What has
+    to be known is not a strength but a shape: where the mark is, and how strong it is at every
+    pixel.</p>
+
+  <p>A strength can be read off the picture, though, where the mark covers a patch with texture in it,
+    because blending scales the variation down along with the values: the spread of the pixels under
+    the mark is <em>(1 &minus; a)</em> times the spread of the same patch without it. Measured on the
+    gradient sample that recovers <strong>0.2526</strong> for a true 0.25, <strong>0.496</strong> for
+    0.5, <strong>0.7379</strong> for 0.75 and <strong>0.8987</strong> for 0.9. Run it end to end
+    &mdash; read the strength, then undo the blend with it &mdash; and it leaves
+    <strong>1, 3, 12 and 9</strong> on that background, and <strong>2, 3, 19 and 35</strong> on the
+    noisy one.</p>
+
+  <p>Set those against the three ways of clearing the same box and the picture changes. On the noisy
+    background, filling the box with one colour sampled from around it leaves <strong>6</strong>, and
+    interpolating between its edges leaves <strong>12</strong>, whatever the strength of the mark was.
+    So at 0.25 and 0.5 the arithmetic wins comfortably, and at 0.9 &mdash; fed the strength it measured
+    for itself &mdash; it leaves 35, nearly six times what the crudest guess leaves. Being able to
+    divide the mark back out is worth a lot while the mark is weak, and it is worth nothing once being
+    slightly wrong about it costs more than guessing.</p>
+
+  <p>That is the line between the two jobs, and it is also the answer to the two things people say a
+    model is for here. One is that it imagines the picture without the mark in it; the other is that
+    it is a filter being run over an image that has noise in it. Both are right about a different
+    half. Where the mark is translucent and its shape is known, there is nothing to imagine and
+    nothing to filter: the background is in the file and a division takes it back out. Where the mark
+    is opaque, or its shape is not known, <em>(1 &minus; a)</em> is 0 and every pixel in the region has
+    to be invented &mdash; which is exactly the case the rest of this page measures, because text sits
+    at <em>a</em> = 1. And whatever invents them is still held to the same threshold as everything
+    else here: what it puts back has to differ from the background by less than the background differs
+    from itself.</p>
+
+  <p>One last thing the numbers settle. A faint mark is not a nearly absent mark. At a strength of 0.1
+    it still moves every pixel under it by 22 of 255, which is nowhere near the floor this page
+    measured for text, and all of it comes back when the blend is undone. What makes a watermark hard
+    to deal with is never that it is faint; it is that its shape is unknown, and that one wrong number
+    about it is multiplied by everything the blend took away.</p>
+
   <h2>What this page does not tell you</h2>
 
   <p>How any particular tool works. Every number here was produced by this browser drawing into a canvas
@@ -268,7 +363,8 @@
     methods is the point of the table, and the exact figures will move with the text, the box and the
     background.</p>
 
-  <p class="crosslink">Measured 2026-10-09 in Chromium 153 via Playwright, canvas 2D, on a 480 &times; 220
+  <p class="crosslink">Measured 2026-10-09 and 2026-10-10 in Chromium 153 via Playwright, canvas 2D,
+    on a 480 &times; 220
     canvas with <code>Sample text</code> at 600 40px Arial drawn at (40, 90) and a 228 &times; 46 box,
     the same setup the tool above uses on its samples. Related:
     <a href="/invisible-characters">the full list of invisible characters</a>,
