@@ -197,11 +197,175 @@ new TextEncoder().encode(carrier).length;  // 102 bytes
     </tbody>
   </table>
 
-  <p>The per-character rate is flat: <strong>4 tokens per tag character in o200k_base, 3 in
-    cl100k_base</strong>, measured at 1, 2, 4, 8 and 16 characters. That is roughly four times what a
-    zero-width space costs, because a zero-width space is three UTF-8 bytes and a tag character is
-    four, and neither has a merge. A 10-word sentence with one tag character after each space went
-    from 11 tokens to 56 &mdash; nine invisible characters, 45 extra tokens.</p>
+  <p>The per-character rate is not flat, and the reason is in the next section: in o200k_base the 32
+    tag characters that mirror ASCII below <code>0x40</code> cost <strong>3</strong> tokens each and
+    the 64 that mirror <code>0x40</code> and above cost <strong>4</strong>; in cl100k_base all 96 cost
+    <strong>3</strong>. A zero-width space costs one token in both encodings, so a tag character is
+    three to four times as expensive as the invisible character most people actually use. A 10-word
+    sentence with one tag character after each space went from 11 tokens to 56 &mdash; nine invisible
+    characters, 45 extra tokens.</p>
+
+  <h2 id="bytes">The bytes are not hiding anything</h2>
+
+  <p>A tag character is <code>U+E0000</code> plus the ASCII character it stands for, and that sum is
+    not a scramble. UTF-8 writes it back out in the open: every tag character is four bytes, and the
+    last two of those bytes are the ASCII character itself wearing a continuation-byte mask.</p>
+
+  <pre><code>UTF-8(U+E0000 + n) = F3 A0 (80 + (n &gt;&gt; 6)) (80 + (n &amp; 0x3F))
+so             n    = ((byte3 - 0x80) &lt;&lt; 6) | (byte4 - 0x80)</code></pre>
+
+  <table>
+    <thead>
+      <tr>
+        <th>ASCII</th>
+        <th>Tag form</th>
+        <th>UTF-8 bytes</th>
+        <th>Last two bytes, mask removed</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="name">U+0020 space</td>
+        <td class="cp">U+E0020</td>
+        <td class="cp">F3 A0 80 A0</td>
+        <td class="cp">0x00, 0x20</td>
+      </tr>
+      <tr>
+        <td class="name">U+002D hyphen</td>
+        <td class="cp">U+E002D</td>
+        <td class="cp">F3 A0 80 AD</td>
+        <td class="cp">0x00, 0x2D</td>
+      </tr>
+      <tr>
+        <td class="name">U+0037 digit 7</td>
+        <td class="cp">U+E0037</td>
+        <td class="cp">F3 A0 80 B7</td>
+        <td class="cp">0x00, 0x37</td>
+      </tr>
+      <tr>
+        <td class="name">U+0041 capital A</td>
+        <td class="cp">U+E0041</td>
+        <td class="cp">F3 A0 81 81</td>
+        <td class="cp">0x01, 0x01</td>
+      </tr>
+      <tr>
+        <td class="name">U+0061 small a</td>
+        <td class="cp">U+E0061</td>
+        <td class="cp">F3 A0 81 A1</td>
+        <td class="cp">0x01, 0x21</td>
+      </tr>
+      <tr>
+        <td class="name">U+007F (CANCEL TAG)</td>
+        <td class="cp">U+E007F</td>
+        <td class="cp">F3 A0 81 BF</td>
+        <td class="cp">0x01, 0x3F</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>Checked one code point at a time across the whole block: <strong>96 out of 96</strong> follow
+    that formula, no exceptions. The block is invisible because no font draws it, not because anything
+    concealed it. Anything that works at the byte level therefore reads the message without trying
+    &mdash; a hex dump, a wire capture, a byte-wise diff, or a tokenizer that falls back to one token
+    per byte.</p>
+
+  <h3>Reading the message back out of the tokens</h3>
+
+  <p>That fallback is the part worth knowing. A byte-level tokenizer cannot merge a code point it has
+    never seen, so it spends one token on each of the four bytes above and the pattern survives into
+    the token stream. Hiding <code>confidential-draft-v7</code> and encoding it with o200k_base gives
+    <strong>81 token IDs</strong>; translating each ID back to the bytes it stands for gives this:</p>
+
+  <pre><code>token IDs   175  254  223   96 | 175  254  223  107 | 175  254  223  106 | ...
+bytes        F3   A0   81   A3 |  F3   A0   81   AF |  F3   A0   81   AE | ...
+mask off     --   --   01   23 |  --   --   01   2F |  --   --   01   2E | ...
+                          'c'                  'o'                  'n'</code></pre>
+
+  <p>Run the formula over every group of four bytes and the whole message comes back: <strong>21
+    characters out of 21, in order, exact</strong>. The token stream is not a lossy summary of the
+    text &mdash; for this block it is the text in another notation, which is why a model can act on
+    words that never reach the screen.</p>
+
+  <p>It also explains the cost. Those 21 characters are 18 letters that mirror ASCII at
+    <code>0x40</code> or above, at four tokens each, plus two hyphens and a digit at three:
+    <strong>81</strong>. A character that mirrors a space or a piece of punctuation is cheaper to hide
+    than one that mirrors a letter.</p>
+
+  <section class="tool">
+
+    <div class="pane">
+      <label for="tginput">Paste text you did not type</label>
+      <textarea id="tginput" spellcheck="false" placeholder="Paste a line that came out of a document, a chat window, a database dump or an API response..."></textarea>
+
+      <div class="row meta">
+        <span id="tgcount">0 characters</span>
+      </div>
+
+      <div class="row">
+        <button id="tgrun" class="primary" type="button">Read it back</button>
+        <button id="tgclear" type="button">Clear</button>
+      </div>
+
+      <div class="row">
+        <input id="tgmsg" type="text" spellcheck="false" placeholder="Or hide a message of your own">
+        <button id="tghide" type="button">Hide it</button>
+      </div>
+    </div>
+
+    <div class="pane">
+      <label for="tgoutput">What the tag characters say</label>
+      <textarea id="tgoutput" spellcheck="false" readonly placeholder="The decoded payload appears here."></textarea>
+
+      <div class="row">
+        <button id="tgcopy" type="button">Copy</button>
+        <span id="tgcopied" class="copied" hidden>Copied</span>
+      </div>
+
+      <div id="tgreport"></div>
+    </div>
+
+  </section>
+
+  <p>Paste the carrier from the top of this page and the tool hands back
+    <code>confidential-draft-v7</code> together with the four bytes of each tag character it found.
+    Paste a line with none in it and it reports zero &mdash; the check is a range test on
+    <code>U+E0000</code> to <code>U+E007F</code>, and a range test is the only thing that finds this
+    block reliably.</p>
+
+  <h2 id="copy">What a copy carries</h2>
+
+  <p>Most hidden text travels by copy-paste, so it is worth knowing what the clipboard actually gets.
+    Measured in Chromium 153 by selecting text, copying through the real clipboard and reading it
+    back: of 25 invisible characters copied out of rendered text, <strong>24 arrive unchanged</strong>
+    and one does not &mdash; and the one that differs is not deleted, it is rewritten.</p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Copied from</th>
+        <th>What lands on the clipboard</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="name">Rendered text on a page</td>
+        <td class="cp"><code>A</code> + <strong>U+0020</strong> + <code>B</code> &mdash; the non-breaking space U+00A0 comes back as an ordinary space</td>
+      </tr>
+      <tr>
+        <td class="name">A form field, selected and copied</td>
+        <td class="cp"><code>A</code> + <strong>U+00A0</strong> + <code>B</code> &mdash; unchanged</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>Tag characters are nowhere in that exception. The 39-code-point carrier from the top of this page
+    comes back as <strong>39 code points</strong> whether it is copied out of rendered text or out of
+    a form field, and pasting it into a <code>&lt;textarea&gt;</code> delivers <strong>39</strong>
+    again. So the reassuring idea that a browser quietly strips invisible characters on the way to the
+    clipboard is not what happens: nothing is stripped, one character is silently rewritten, and which
+    one depends on whether you copied a paragraph or a field. The practical version is short &mdash;
+    if you want to know what is in a string, do not clean it by copying it somewhere else. Read the
+    bytes.</p>
 
   <h2>Measured: nothing catches it</h2>
   <p>This is the part that matters. Every row below was run on this machine, not assumed:</p>
@@ -348,7 +512,7 @@ clean = TAG.sub("", text)</code></pre>
     validation and length figures above were measured in Chromium 153 on Windows; other engines
     count code units the same way, but check before you rely on a number in production.</p>
 
-  <p class="crosslink">Measured 2026-09-22 with Python 3.13 (<code>unicodedata</code> 15.1.0),
+  <p class="crosslink">Measured 2026-09-22, updated 2026-10-11, with Python 3.13 (<code>unicodedata</code> 15.1.0),
     <code>tiktoken</code> o200k_base and cl100k_base, Node 22 and Chromium 153 via Playwright.
     Related: <a href="/token-cost">what invisible characters cost you in tokens</a>,
     <a href="/line-separators">U+2028 and U+2029 in JSON</a>,
@@ -362,6 +526,7 @@ clean = TAG.sub("", text)</code></pre>
   </footer>
 </main>
 <!-- Cloudflare Web Analytics -->
+<script src="/tag-decode.js" defer></script>
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token":"20874485db814b21a0a76d82d7f9b4de"}'></script>
 </body>
 </html>
