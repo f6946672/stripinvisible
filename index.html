@@ -161,7 +161,12 @@
     <a href="/remove-text-from-image">text from an image</a> is reconstruction, not deletion, and the
     same measurement answers both directions: over a 228 &times; 46 box on a background that varies by
     5, one sampled colour leaves 5, blurring it in place leaves 130 and interpolating leaves 2, while
-    text drawn 1/255 away from a flat background still occupies all 2,745 of its pixels.</p>
+    text drawn 1/255 away from a flat background still occupies all 2,745 of its pixels. Clearing a
+    mark off a photo rather than text off an image? The
+    <a href="/remove-watermark-from-photo">watermark remover</a> writes over a box
+    <strong>2.98&times;</strong> the mark &mdash; 5,432 of the pixels it rewrites were never the mark,
+    and drawing the box a pixel tighter writes 942 clean pixels wrong on a background where a wider
+    box costs nothing.</p>
 
   <section class="tool">
 

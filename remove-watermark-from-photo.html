@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Remove Watermark from Photo: What the Box Writes Over, Measured</title>
+<meta name="description" content="A removal tool writes one rectangle, and the rectangle is 2.98 times the mark. Measured in Chromium 153 on a 480 &times; 220 canvas: a 221 &times; 37 box around a 2,745-pixel mark covers 8,177 pixels, so 5,432 of the pixels it rewrites were never the mark. On a flat background the extra ring costs nothing; on noise it costs 4,960 pixels. Shrink the box by one and even a flat background loses 942.">
+<link rel="canonical" href="https://stripinvisible.com/remove-watermark-from-photo">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Remove Watermark from Photo: What the Box Writes Over, Measured">
+<meta property="og:description" content="The box is the whole job. A 221 &times; 37 box around a 2,745-pixel mark covers 8,177 pixels; 5,432 of them were never the mark, and a blended mark is arithmetic instead of invention.">
+<meta property="og:url" content="https://stripinvisible.com/remove-watermark-from-photo">
+<meta name="twitter:card" content="summary">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/styles.css">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebPage",
+      "@id": "https://stripinvisible.com/remove-watermark-from-photo",
+      "url": "https://stripinvisible.com/remove-watermark-from-photo",
+      "name": "Remove Watermark from Photo: What the Box Writes Over, Measured",
+      "description": "A removal tool writes one rectangle, and the rectangle is 2.98 times the mark. Measured in Chromium 153 on a 480 &times; 220 canvas."
+    },
+    {
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "Strip Invisible", "item": "https://stripinvisible.com/" },
+        { "@type": "ListItem", "position": 2, "name": "Remove watermark from photo", "item": "https://stripinvisible.com/remove-watermark-from-photo" }
+      ]
+    },
+    {
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "How do I remove a watermark from a photo?",
+          "acceptedAnswer": { "@type": "Answer", "text": "The operation is one write over one region. Measured in Chromium 153, the region is a rectangle: a 2,745-pixel mark sits inside a 221 &times; 37 box of 8,177 pixels, so a tool that rebuilds the box rewrites 5,432 pixels that were never part of the mark. What decides whether the result looks clean is not the tool's name but how far the rebuilt pixels sit from the background the photo actually has there." }
+        },
+        {
+          "@type": "Question",
+          "name": "Why does removing a watermark leave a visible rectangle?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Because the box is bigger than the mark and the extra ring is judged by the background, not by the mark. Measured on three backgrounds with a box drawn exactly on the mark, the extra one-pixel ring costs 0 wrong pixels on a flat background, 3,677 on a gradient and 4,960 on noise. The same mistake is free on one photo and visible on the next, which is why a watermark remover that is seamless on a flat image smears on a textured one." }
+        },
+        {
+          "@type": "Question",
+          "name": "Is it safer to draw the box tightly around the watermark?",
+          "acceptedAnswer": { "@type": "Answer", "text": "No, and measured it is worse. Drawn one pixel smaller than the mark, the ring of pixels the tool samples from is itself the mark, so the reference it copies is dirty: even on a flat background where a wider box costs nothing, the tight box writes 942 clean pixels wrong. A box that is too large and a box that is too small both bite, for opposite reasons." }
+        },
+        {
+          "@type": "Question",
+          "name": "Can you remove a watermark from a photo exactly?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Sometimes, and the test is whether any background survives under the mark. A watermark is the picture scaled down and mixed with one colour, so every pixel under it still holds (1 minus the strength) of the background, and dividing the blend back out returns it exactly &mdash; measured at a strength of 0.5 leaving 0 of 255, and 1 at 0.25. An opaque mark, or a photograph where the strength is unknown and varies across the mark, leaves nothing to divide out and every pixel has to be invented instead." }
+        }
+      ]
+    }
+  ]
+}
+</script>
+</head>
+<body>
+<main>
+
+  <nav class="crumbs" aria-label="Breadcrumb">
+    <a href="/">Strip Invisible</a> &rsaquo; <span>Remove watermark from photo</span>
+  </nav>
+
+  <h1>Remove watermark from photo: what the box writes over</h1>
+
+  <p class="lede"><strong>Short answer:</strong> a remover does not write over the watermark &mdash; it
+    writes over a box, and the box is always larger than the mark inside it. Measured in
+    Chromium 153 on a 480 &times; 220 canvas, a <strong>2,745-pixel</strong> mark sits inside a
+    <strong>221 &times; 37</strong> box that covers <strong>8,177</strong> pixels: the box is
+    <strong>2.98&times;</strong> the mark, and <strong>5,432</strong> of the pixels it rewrites were
+    never the mark. Whether that shows depends entirely on the background the extra ring lands on
+    &mdash; <strong>0</strong> wrong pixels on a flat fill, <strong>4,960</strong> on noise. Drawing
+    the box one pixel tighter does not help: it samples its replacement from the mark itself and
+    writes <strong>942</strong> clean pixels wrong on a background where a wider box costs nothing.</p>
+
+  <section class="tool">
+    <div class="pane">
+      <label for="wmfile">Load a photo, then drag a box over the mark</label>
+      <input id="wmfile" type="file" accept="image/*">
+      <p class="row meta">Or start from a sample, then put the box on the mark in one click:
+        <button type="button" class="grabbtn" data-wmsample="flat">flat background</button>
+        <button type="button" class="grabbtn" data-wmsample="gradient">gradient</button>
+        <button type="button" class="grabbtn" data-wmsample="noisy">noisy</button>
+        <button type="button" class="grabbtn" data-wmselect="mark">box the mark exactly</button>
+      </p>
+      <p class="row meta">A mark can be painted over the picture or mixed into it. Draw both and
+        compare what it takes to undo each:
+        <button type="button" class="grabbtn" data-wmmark="opaque">opaque text</button>
+        <button type="button" class="grabbtn" data-wmmark="blend">a blended mark</button>
+        <select id="wmalpha" aria-label="Strength of the blended mark">
+          <option value="0.25">strength 0.25</option>
+          <option value="0.5" selected>strength 0.5</option>
+          <option value="0.75">strength 0.75</option>
+          <option value="0.9">strength 0.9</option>
+        </select>
+      </p>
+      <p class="row meta">Then rebuild what is inside the box, and watch what the box itself costs:
+        <button type="button" class="grabbtn" data-wmerase="interp">rebuild from the edges</button>
+        <button type="button" class="grabbtn" data-wmerase="invert">undo the blend</button>
+        <button type="button" class="grabbtn" data-wmerase="invertest">undo it, strength read off the picture</button>
+        <button type="button" class="grabbtn" data-wmgrow="1">box one pixel wider</button>
+        <button type="button" class="grabbtn" data-wmshrink="1">box one pixel tighter</button>
+        <button type="button" class="grabbtn" data-wmreset="1">reset</button>
+      </p>
+    </div>
+    <div class="pane">
+      <label for="wmcanvas">What this browser measures in and around the box</label>
+      <div class="rt-stage"><canvas id="wmcanvas" width="480" height="220"></canvas><canvas id="wmoverlay" width="480" height="220"></canvas></div>
+      <ul class="rt-facts" id="wmfacts"></ul>
+      <p id="wmverdict" class="verdict idle">Pick a sample or load a photo, then drag a box over the mark in it.</p>
+      <p class="row meta">Every row is a reading this browser takes from your own pixels: the box and the
+        ring of pixels just outside it are read straight off the canvas. The samples carry a copy of
+        their own background without the mark on it, so those readings are the numbers quoted below; a
+        photo you load has no such copy, so there the reading is taken against a straight line fitted
+        across the box, and the tool reports both readings and the share between them rather than a
+        verdict. Draw the box tighter than the mark and the ring itself picks up mark pixels &mdash;
+        which is exactly why the tight box goes wrong, and the background variation row will say so.</p>
+    </div>
+  </section>
+
+  <h2>The mark is small; the box is what gets written</h2>
+
+  <p>Start with the arithmetic that no tool can avoid. A mark occupies some pixels; a rectangular
+    selection around it occupies more, and the difference is not a rounding error. Measured in
+    Chromium 153 with <code>Sample text</code> at 600 40px Arial on a 480 &times; 220 canvas, the glyph
+    covers <strong>2,745 pixels</strong>, its bounding box measures <strong>221 &times; 37</strong>,
+    and that box holds <strong>8,177 pixels</strong> &mdash; <strong>2.98 times</strong> the mark.
+    Every pixel inside the box is a pixel a rebuild-over-the-box has to write, and
+    <strong>5,432</strong> of them were never the mark.</p>
+
+  <div class="scroll">
+    <table>
+      <thead>
+        <tr><th>What is being counted</th><th>Pixels</th><th>Share of the box</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="nm">The mark itself</td><td class="cp">2,745</td><td class="cp">33.6%</td></tr>
+        <tr><td class="nm">The box around it (221 &times; 37)</td><td class="cp"><strong>8,177</strong></td><td class="cp">100%</td></tr>
+        <tr><td class="nm">Pixels in the box that were never the mark</td><td class="cp"><strong>5,432</strong></td><td class="cp">66.4%</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>Those 5,432 pixels are not evenly spread. Measured by distance from the nearest mark pixel, the
+    box is mostly a thin ring: 2,000 of them sit within 1&ndash;2 pixels of the mark, 1,721 within
+    3&ndash;5, and 1,505 within 6&ndash;10 &mdash; but <strong>206</strong> sit further than 11 pixels
+    away, the furthest <strong>19 pixels</strong> out. A rectangle drawn around text is filled with
+    whatever the corners enclose, and at the corners it is a long way from any mark pixel. The
+    1,711 pixels more than five pixels from the mark are pure invention: no mark information reaches
+    them, so whatever a tool puts there it made up.</p>
+
+  <h2>What the extra ring costs depends on the photo</h2>
+
+  <p>Now the part that decides whether the result looks clean. Draw the box exactly on the mark and
+    rebuild everything inside it by interpolating between the pixels just outside the left and right
+    edges &mdash; the mildest of the ordinary rebuilds. The mark pixels come back close, but the ring
+    around them is rewritten too, and how wrong those rewrites are is a property of the background,
+    not of the tool:</p>
+
+  <div class="scroll">
+    <table>
+      <thead>
+        <tr><th>Background behind the mark</th><th>Clean pixels a rebuild writes over wrongly (box on the mark)</th><th>Box one pixel wider</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="nm">Flat (varies by 0)</td><td class="cp"><strong>0</strong></td><td class="cp"><strong>0</strong></td></tr>
+        <tr><td class="nm">Gradient (varies by 5)</td><td class="cp">3,677</td><td class="cp">4,069</td></tr>
+        <tr><td class="nm">Noisy (varies by 6)</td><td class="cp">4,960</td><td class="cp">5,476</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>Read the first column against the first row and the whole problem appears. On a flat fill, the
+    pixels on either side of the box are the same value, so a straight line drawn between them
+    reproduces the background exactly and the extra ring costs <strong>nothing</strong> &mdash; the
+    box could be ten times the mark and the result would still be clean. On a gradient the difference
+    is 3,677; on noise it is 4,960. The identically sized box, drawn by the identical tool, is
+    free on one photo and visible on the next, and the only thing that changed is what the photo
+    already had in it.</p>
+
+  <p>The wider box in the third column is the same story amplified. Growing the selection by a single
+    pixel adds 392 wrong pixels on the gradient and 516 on the noise, and still nothing on the flat
+    fill. There is no box size that is safe everywhere, because the cost of a given box is set by the
+    picture rather than by the box.</p>
+
+  <h2>Why a tighter box is worse, not safer</h2>
+
+  <p>The instinct when the result smears is to draw the box smaller so less gets rewritten. Measured,
+    that makes it worse, and for a reason that is easy to miss: the pixels a rebuild copies from are
+    the ones just <em>outside</em> the box, and if the box is drawn inside the mark, those reference
+    pixels are themselves mark pixels. The reference the tool trusts is dirty.</p>
+
+  <div class="scroll">
+    <table>
+      <thead>
+        <tr><th>Box size (flat background)</th><th>Box area</th><th>Clean pixels a rebuild writes over wrongly</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="nm">Three pixels wider than the mark</td><td class="cp">9,761</td><td class="cp"><strong>0</strong></td></tr>
+        <tr><td class="nm">One pixel wider than the mark</td><td class="cp">8,697</td><td class="cp"><strong>0</strong></td></tr>
+        <tr><td class="nm">Exactly on the mark</td><td class="cp">8,177</td><td class="cp"><strong>0</strong></td></tr>
+        <tr><td class="nm">One pixel tighter</td><td class="cp">7,665</td><td class="cp"><strong>942</strong></td></tr>
+        <tr><td class="nm">Two pixels tighter</td><td class="cp">7,161</td><td class="cp">1,756</td></tr>
+        <tr><td class="nm">Three pixels tighter</td><td class="cp">6,665</td><td class="cp">2,012</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>This is on the <em>flat</em> background, where a box up to any width costs nothing. The moment the
+    box stops enclosing the whole mark, 942 clean pixels come out wrong, and the tighter it gets the
+    worse it is. So the two failure modes sit on either side of the mark: too wide, and the box
+    rewrites background it cannot reconstruct; too tight, and it copies from the mark it was supposed
+    to be replacing. A rectangle is a coarse instrument for a shape that is not one, and both ends of
+    the sizing are the reason.</p>
+
+  <h2>When the mark is mixed in, the box stops being the limit</h2>
+
+  <p>Everything above assumes the mark is painted over the photo, opaque, so the background underneath
+    is simply gone. A watermark is usually not that. It is the picture scaled down and mixed with one
+    colour, so every pixel under it still holds a fraction of what was there, and that fraction can be
+    divided back out rather than invented.</p>
+
+    <h2 id="blend">AI watermark remover: a mark is mixed into the picture, not painted over it</h2>
+
+  <p>The word in front of the tool is doing two different jobs, and only one of them needs a model. A
+    watermark is not a patch of different pixels sitting on top of a picture; it is the picture,
+    scaled down and mixed with one colour. Every pixel under it holds <em>(1 &minus; a)</em> of the
+    background plus <em>a</em> of the mark, where <em>a</em> is how strong the mark is at that pixel.
+    At <em>a</em> = 1 the background is gone and the only way forward is to invent pixels. At anything
+    below that the background is still in the file, and getting it back is arithmetic rather than
+    imagination: <em>background = (pixel &minus; a &times; mark colour) &divide; (1 &minus; a)</em>.</p>
+
+  <div class="scroll">
+    <table>
+      <thead>
+        <tr><th>Strength of the mark</th><th>Background still in the pixel</th><th>How far the mark moves it</th><th>Left after undoing the blend</th><th>Left if the strength is wrong by 0.01</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="cp">0.10</td><td class="cp">90%</td><td class="cp">22</td><td class="cp">1</td><td class="cp">1</td></tr>
+        <tr><td class="cp">0.25</td><td class="cp">75%</td><td class="cp">52</td><td class="cp"><strong>1</strong></td><td class="cp">4</td></tr>
+        <tr><td class="cp">0.50</td><td class="cp">50%</td><td class="cp">105</td><td class="cp"><strong>0</strong></td><td class="cp">4</td></tr>
+        <tr><td class="cp">0.75</td><td class="cp">25%</td><td class="cp">158</td><td class="cp">2</td><td class="cp">7</td></tr>
+        <tr><td class="cp">0.90</td><td class="cp">10%</td><td class="cp">189</td><td class="cp"><strong>0</strong></td><td class="cp"><strong>15</strong></td></tr>
+        <tr><td class="nm">1.00 (opaque)</td><td class="cp">0%</td><td class="cp">210</td><td class="cp">nothing left to undo</td><td class="cp">&mdash;</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>Measured in Chromium 153 over the same 228 &times; 46 box the rest of this page uses, on the flat
+    sample with a background of 240 and a mark colour of 30. Two things in that table are worth
+    stopping on. The first is the row at 0.75: the blend lands on 82.5, an 8-bit pixel has to write 82,
+    and dividing by <em>(1 &minus; a)</em> turns that half-step into a whole 2 &mdash; the same
+    rounding at a strength of 0.5 costs nothing, because there the blend lands on a whole number. The
+    second is the last column: being wrong about the strength by one hundredth leaves 1 of 255 at 0.1
+    and <strong>15</strong> at 0.9, because what the mistake is multiplied by is the gap between the
+    background and the mark colour, divided by how little of the background is left. The arithmetic is
+    exact and unforgiving at the same time.</p>
+
+  <p>It is also per pixel, and that is what decides whether it can be used at all. An overlay whose
+    strength runs from 0.2 on one side to 0.8 on the other &mdash; which is what the soft edge of a
+    logo is &mdash; undone with one number, its own average of 0.5, leaves <strong>126</strong> of
+    255. Undone with the strength of each column, the same formula leaves <strong>5</strong>. What has
+    to be known is not a strength but a shape: where the mark is, and how strong it is at every
+    pixel.</p>
+
+  <p>A strength can be read off the picture, though, where the mark covers a patch with texture in it,
+    because blending scales the variation down along with the values: the spread of the pixels under
+    the mark is <em>(1 &minus; a)</em> times the spread of the same patch without it. Measured on the
+    gradient sample that recovers <strong>0.2526</strong> for a true 0.25, <strong>0.496</strong> for
+    0.5, <strong>0.7379</strong> for 0.75 and <strong>0.8987</strong> for 0.9. Run it end to end
+    &mdash; read the strength, then undo the blend with it &mdash; and it leaves
+    <strong>1, 3, 12 and 9</strong> on that background, and <strong>2, 3, 19 and 35</strong> on the
+    noisy one.</p>
+
+  <p>Set those against the three ways of clearing the same box and the picture changes. On the noisy
+    background, filling the box with one colour sampled from around it leaves <strong>6</strong>, and
+    interpolating between its edges leaves <strong>12</strong>, whatever the strength of the mark was.
+    So at 0.25 and 0.5 the arithmetic wins comfortably, and at 0.9 &mdash; fed the strength it measured
+    for itself &mdash; it leaves 35, nearly six times what the crudest guess leaves. Being able to
+    divide the mark back out is worth a lot while the mark is weak, and it is worth nothing once being
+    slightly wrong about it costs more than guessing.</p>
+
+  <p>That is the line between the two jobs, and it is also the answer to the two things people say a
+    model is for here. One is that it imagines the picture without the mark in it; the other is that
+    it is a filter being run over an image that has noise in it. Both are right about a different
+    half. Where the mark is translucent and its shape is known, there is nothing to imagine and
+    nothing to filter: the background is in the file and a division takes it back out. Where the mark
+    is opaque, or its shape is not known, <em>(1 &minus; a)</em> is 0 and every pixel in the region has
+    to be invented &mdash; which is exactly the case the rest of this page measures, because text sits
+    at <em>a</em> = 1. And whatever invents them is still held to the same threshold as everything
+    else here: what it puts back has to differ from the background by less than the background differs
+    from itself.</p>
+
+  <p>One last thing the numbers settle. A faint mark is not a nearly absent mark. At a strength of 0.1
+    it still moves every pixel under it by 22 of 255, which is nowhere near the floor this page
+    measured for text, and all of it comes back when the blend is undone. What makes a watermark hard
+    to deal with is never that it is faint; it is that its shape is unknown, and that one wrong number
+    about it is multiplied by everything the blend took away.</p>
+
+  
+
+  <h2>What this page does not tell you</h2>
+
+  <p>How any particular service works. Every number here was produced by this browser drawing into a
+    canvas and reading the pixels back, and nothing was uploaded. A tool that rebuilds a region from a
+    learned model is not doing any of the operations above and can beat all of them; what it cannot do
+    is change what counts as clean, because that is set by the photo it was handed and by how large a
+    box it wrote.</p>
+
+  <p>The measurements are one string at one size and weight in one font stack, and the 2,745 pixels are
+    a property of that string at that size, not a constant. The noisy background is uniform noise at a
+    known amplitude rather than a photograph, which is structured; structure is what a rebuild can
+    exploit and uniform noise is the case where it has nothing to work with, so a photograph will
+    generally land between the gradient column and the noisy one. This page also does not touch whether
+    a mark is yours to remove; it measures the pixels only.</p>
+
+  <p class="crosslink">Measured 2026-10-10 and 2026-10-12 in Chromium 153 via Playwright, canvas 2D,
+    on a 480 &times; 220 canvas with <code>Sample text</code> at 600 40px Arial and a 221 &times; 37
+    box, the same setup the tool above uses on its samples. Related:
+    <a href="/remove-text-from-image">the number behind whether a patch shows at all</a>,
+    <a href="/invisible-characters">the full list of invisible characters</a>,
+    <a href="/hidden-text">text that is hidden on a page rather than in a picture</a>, and
+    <a href="/">stripping the invisible characters out of text you can actually see</a>.</p>
+
+  <footer class="foot">
+    <a href="/about">About</a> &middot; <a href="/privacy">Privacy</a> &middot; <a href="/contact">Contact</a> &middot; <a href="https://github.com/f6946672/stripinvisible/blob/main/remove-watermark-from-photo.html">Source</a>
+  </footer>
+</main>
+<script src="/list.js"></script>
+<script src="/remove-watermark-from-photo.js"></script>
+<!-- Cloudflare Web Analytics -->
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token":"20874485db814b21a0a76d82d7f9b4de"}'></script>
+</body>
+</html>
