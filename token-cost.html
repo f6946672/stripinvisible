@@ -88,8 +88,10 @@
   </table>
 
   <p>The pattern is close to linear: <strong>one invisible character in, roughly one token out.</strong>
-    Work out the cost of any piece of text by counting the hidden characters &mdash; the token count
-    rises by about that much.</p>
+    It holds while each character stands on its own, which is what every row above does. Move them and
+    the rate moves too &mdash; a character buried inside a word costs about two, a run of identical
+    ones costs a quarter each. <a href="#placement">Where the character lands</a> prices the same
+    1,000 characters four ways.</p>
 
   <h2>Why a character you cannot see still costs a token</h2>
   <p>Tokenizers are built from byte-pair merges learned on ordinary text. Common English words collapse
@@ -100,6 +102,96 @@
     than zero.</p>
   <p>That is the whole mechanism. There is nothing exotic about it, which is exactly why it gets
     missed: everything about these characters says they are not there.</p>
+
+  <h2 id="placement">Where the character lands changes the price</h2>
+  <p>Every row below carries the same 1,000 zero-width spaces through the same 1,000-word document
+    &mdash; 1,140 tokens clean in <code>o200k_base</code>, 1,160 in <code>cl100k_base</code>. Nothing
+    changes except where they sit, and the bill moves by a factor of eight.</p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Where the same 1,000 characters sit</th>
+        <th>Extra tokens (o200k_base)</th>
+        <th>Extra tokens (cl100k_base)</th>
+        <th>Per character</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="name">One after each word</td>
+        <td class="cp">+1,000</td>
+        <td class="cp">+1,000</td>
+        <td class="cp">1.00</td>
+      </tr>
+      <tr>
+        <td class="name">One before each word</td>
+        <td class="cp">+1,221</td>
+        <td class="cp">+1,217</td>
+        <td class="cp">1.22</td>
+      </tr>
+      <tr>
+        <td class="name">One inside each word</td>
+        <td class="cp"><strong>+2,109</strong></td>
+        <td class="cp"><strong>+2,125</strong></td>
+        <td class="cp"><strong>2.11</strong></td>
+      </tr>
+      <tr>
+        <td class="name">All 1,000 in one block at the end</td>
+        <td class="cp"><strong>+251</strong></td>
+        <td class="cp">+500</td>
+        <td class="cp"><strong>0.25</strong></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p>Three mechanisms are at work and none of them belongs to the character. The first is that a word
+    which fits in one token stops fitting once something invisible appears in the middle of it.
+    <code>authentication</code> is a single token; with one zero-width space between
+    <code>authent</code> and <code>ication</code> it comes out as four &mdash; <code>auth</code>,
+    <code>ent</code>, the character, <code>ication</code>. One of those is the character you inserted.
+    The other two are the word you cut. Measured one word at a time across the sample, 860 of the
+    1,000 words cost more with the character inside than with it trailing, and the surplus comes to
+    <strong>939 tokens</strong> before the characters themselves are counted.</p>
+
+  <p>The second is a detail of how English gets tokenized: the space in front of a word belongs to the
+    word. <code>&nbsp;alpha</code> is one token. Put an invisible character between that space and
+    <code>alpha</code> and you have two. In this sample 905 of the 1,000 words are a single token in
+    that leading-space form, and for 193 of them the character in front cost two tokens or more rather
+    than one. That is the gap between 1.00 and 1.22.</p>
+
+  <p>The third runs the other way. A run of identical characters is cheap, because the tokenizer holds
+    a token for the repetition: in <code>o200k_base</code> a single token decodes back to four
+    zero-width spaces, so eight in a row cost 2 tokens, sixteen cost 4, and a thousand cost 250. In
+    <code>cl100k_base</code> the same token holds two, which is why the identical block costs 500
+    there. This is the one arrangement where counting characters overcharges you, by four.</p>
+
+  <p>Do not carry that discount over to other characters. A block of 1,000 identical tag characters
+    cost <strong>+4,001</strong> tokens against <strong>+4,000</strong> spread one per word &mdash; no
+    collapse whatsoever. The discount exists only where that exact repetition earned a token, and
+    nothing about the character tells you whether it did. It is also why the flat "one token each"
+    rule survives unchallenged: it is tested on characters sitting alone after a word, the one
+    arrangement where it happens to be correct.</p>
+
+  <p>There is an argument running underneath all of this. One side holds that a single added character
+    cannot move the count, because it ought to merge into the text around it. The other answers that
+    sometimes it merges and the count stays where it was, and sometimes it does not and the count goes
+    up. Both are describing the same machinery from opposite ends, and the version with ordinary text
+    in it is familiar enough: a number such as 123456789 comes out as three tokens or four depending
+    on where the splits fall, so the count was never a function of how many characters were typed. It
+    is the same reason character-level work is where these models are weakest &mdash; the digits of
+    101 arrive as <code>10</code> and <code>1</code>, not as three characters, and a model fed raw
+    bytes has no such trouble. A hidden character gets no exemption from any of it.</p>
+
+  <p>Which leaves an awkward shape for anyone trying to budget. The cheapest place to put a thousand
+    hidden characters is the easiest place to find: a run of a thousand is caught by any scanner that
+    flags three in a row. The most expensive place &mdash; inside words &mdash; is invisible to that
+    scanner, and invisible to an estimate built by counting characters. Counting is still the right
+    first move, but it counts what is present, not what will be billed. The multiplier is set by
+    position, and it runs from 0.25 to about 2.1 per character over the same 1,000.</p>
+
+  <p>Measured 2026-10-12 with <code>tiktoken</code> 0.14.0 on the same 1,000-word sample, in both
+    <code>o200k_base</code> and <code>cl100k_base</code>; the four rows differ only in placement.</p>
 
   <h2>Where this actually bites</h2>
   <ul>
