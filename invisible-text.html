@@ -60,6 +60,11 @@
         },
         {
           "@type": "Question",
+          "name": "Does a form field remove invisible characters?",
+          "acceptedAnswer": { "@type": "Answer", "text": "No. Measured in Chromium 153 across 52 code points: a single-line input deletes only U+000A and U+000D and passes the other fifty through unchanged, including U+2028, U+2029 and U+0085. A textarea behaves differently in a way that is easy to miss: textarea.value reports line breaks as U+000A while the submitted form body sends them as CRLF, and a textarea with wrap=\"hard\" adds CRLF pairs that were never typed, one every cols plus 2 characters." }
+        },
+        {
+          "@type": "Question",
           "name": "How do I remove invisible text?",
           "acceptedAnswer": { "@type": "Answer", "text": "In JavaScript: text.replace(/[\\u00AD\\u180E\\u200B-\\u200F\\u202A-\\u202E\\u2060-\\u206F\\uFEFF\\uFFF9-\\uFFFB\\u3164\\u1160\\u115F\\uFFA0]/gu, ''). In Python: import unicodedata; BAD = {'\\u3164','\\u1160','\\u115f','\\uffa0'}; clean = ''.join(c for c in text if unicodedata.category(c) != 'Cf' and c not in BAD). Leave U+200C, U+200D and U+FE0F in place unless the text has no emoji and no Arabic, Persian or Devanagari." }
         }
@@ -265,7 +270,8 @@
     &mdash; U+200B, U+00AD, U+FEFF, U+2060, U+200D, U+180E, the astral U+E0020, and U+2028. Nothing
     was dropped, and nothing was normalised away. The browser's own notion of rendered text keeps
     them too: <code>innerText</code> and <code>textContent</code> came back identical at thirteen
-    code points, zero dropped.</p>
+    code points, zero dropped. That is the clipboard road. A form is a different road with different
+    arithmetic, and it is <a href="#roads">measured separately below</a>.</p>
 
   <p>The accessibility layer is where the disagreement usually sits, and it is a disagreement about
     different layers rather than about facts. Chromium does not filter these characters before
@@ -274,6 +280,68 @@
     the raw code point, for all eight characters tested. So the browser passes the code points through verbatim, and what happens next
     belongs entirely to the screen reader &mdash; one reader may say nothing, another spells the
     code point out, and either behaviour is consistent with what was measured here.</p>
+
+  <h2 id="roads">A form sends a different string than the one your script reads</h2>
+  <p>Copy is one way invisible text leaves a page. A form is another, and a form is two things at
+    once: the value JavaScript can read out of the element, and the value that actually reaches the
+    server. Measured in Chromium 153 by posting a real form to a local server and reading the raw
+    request body, the two are not the same string. A textarea holding <code>a</code> + U+000A +
+    <code>b</code> reports <code>a</code>, U+000A, <code>b</code> through
+    <code>textarea.value</code>, and sends <code>v=a%0D%0Ab</code> &mdash; a carriage return
+    <em>and</em> a line feed. Put <code>a</code> + U+000D + U+000A + <code>b</code> into the same
+    field and the readable value collapses to a single U+000A, while the body still carries one CRLF
+    pair, not two.</p>
+
+  <p>The set behind the next table is 52 code points: every character in the table at the top of this
+    page, plus the control and separator characters that turn up in text pasted from somewhere else
+    &mdash; U+0000, U+0009, U+000B, U+000C, U+001C to U+001F, U+007F, U+0085, U+009F, U+2028,
+    U+2029, U+202F and U+3000. One code point at a time, through four roads out of the page:</p>
+
+  <div class="scroll">
+    <table>
+      <thead>
+        <tr><th>Road out</th><th>What it does to the 52</th><th>Which ones change</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="cp"><code>textarea.value</code>, read by JavaScript</td><td class="name">51 of 52 unchanged</td><td class="name">U+000D becomes U+000A</td></tr>
+        <tr><td class="cp">The same textarea, submitted</td><td class="name">50 of 52 unchanged</td><td class="name">U+000A and U+000D both leave as CRLF</td></tr>
+        <tr><td class="cp">A single-line <code>&lt;input&gt;</code></td><td class="name">50 of 52 unchanged</td><td class="name">U+000A and U+000D are deleted</td></tr>
+        <tr><td class="cp">A textarea with <code>wrap="hard"</code></td><td class="name">Adds line breaks nobody typed</td><td class="name">CRLF every <code>cols</code> + 2 characters</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>The last row is the odd one, because none of it is a character anybody typed. A textarea with
+    <code>wrap="hard"</code> and <code>cols="4"</code>, holding 26 letters and no break at all, went
+    out as four chunks joined by CRLF &mdash; a line break every six characters &mdash; while
+    <code>textarea.value</code> was still the same 26 letters with nothing between them.
+    <code>cols="8"</code> produced a break every ten, <code>cols="20"</code> every 22, and
+    <code>cols="40"</code> inserted none at all, because 26 letters fit. Hard wrapping is not the
+    default; soft wrapping, which most people leave in place, does not do this.</p>
+
+  <p>A single-line field is narrower than it looks. It deletes exactly two of the 52 &mdash;
+    U+000A and U+000D &mdash; and hands all fifty others back untouched, including U+000B, U+000C,
+    U+0085, U+2028 and U+2029, the last two being the characters a browser will not break a line at
+    under any setting, which the <a href="/line-separators">line separator page</a> measures. A box
+    that cannot show a line break is not a filter for line breaks: it filters the two ordinary ones,
+    waves the invisible ones through, and U+2028 arrives at the server as three bytes,
+    <code>%E2%80%A8</code>. The same is true of a zero-width space in the middle of a word, which
+    goes out as <code>%E2%80%8B</code> and comes back as U+200B on the other end.</p>
+
+  <p>So both of the things people say about forms are wrong at the same time. "The form cleaned it"
+    is wrong: fifty of the 52 arrive byte for byte. "The form handed it straight through" is wrong
+    too: two are deleted, two are rewritten, and a hard-wrapped textarea adds some. The long-running
+    argument about which way round the browsers do it &mdash; one camp reporting bare line feeds,
+    another reporting carriage returns &mdash; is settled by measuring rather than by picking a
+    side: Chromium 153 sends CRLF. If a backend is seeing bare line feeds, something after the field
+    normalised them. The field did not.</p>
+
+  <p>Which means the practical version is short. Read <code>textarea.value</code> when you want to
+    know what the person in front of the form has, and read the request body when you want to know
+    what you are about to store, and do not assume the two agree. If the length matters, count it on
+    the side that will consume it: a <code>maxlength</code> check counts the readable value, while
+    the bytes your database stores are the submitted one, and on a hard-wrapped field those are not
+    the same string.</p>
 
   <h2>Getting it back out</h2>
   <p>Format characters come out with a character class; the fillers have to be named separately
@@ -296,7 +364,8 @@
     rules, and a tokenizer inside a search index is a different thing again from either. Check the
     numbers on your own stack before you build anything on them.</p>
 
-  <p class="crosslink">Measured 2026-09-24 with Chromium 153.0.8010.12 on Windows, Python 3.13
+  <p class="crosslink">Measured 2026-09-24 with Chromium 153.0.8010.12 on Windows, Python 3.13,
+    with the form measurements added 2026-10-13 on the same browser. Related:
     (<code>unicodedata</code> 15.1.0) and Node 22 via Playwright. Related:
     <a href="/invisible-characters">what an invisible character does to a form field</a>,
     <a href="/tag-characters">Unicode tag characters</a> that hide a whole ASCII message,
