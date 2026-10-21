@@ -19,6 +19,10 @@ jobs:
       deployments: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Full history: build.mjs reads each page's last commit date for the
+          # sitemap lastmod. A shallow clone would give every file the same date.
+          fetch-depth: 0
 
       - uses: actions/setup-node@v4
         with:

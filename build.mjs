@@ -1,4 +1,5 @@
 import { mkdirSync, copyFileSync, writeFileSync, readdirSync, statSync, unlinkSync } from 'node:fs';
+import { execSync } from 'node:child_process';
 import { join } from 'node:path';
 
 const SITE = 'https://stripinvisible.com';
@@ -52,7 +53,23 @@ const pages = readdirSync(OUT)
   .map((f) => (f === 'index.html' ? '/' : '/' + f.replace(/\.html$/, '')))
   .sort((a, b) => (a === '/' ? -1 : b === '/' ? 1 : a.localeCompare(b)));
 
-const lastmod = new Date().toISOString().slice(0, 10);
+// Per-page lastmod, taken from the last commit that touched the file. A single
+// build-wide date is a signal Google learns to distrust: when every URL claims
+// the same day, no page stands out as changed and the crawl scheduler stops
+// using it. File mtime is no good either — a CI checkout stamps every file with
+// the same time — so ask git instead. Needs full history: see fetch-depth in
+// .github/workflows/deploy.yml.
+const lastmodFor = (p) => {
+  const src = p === '/' ? 'index.html' : p.slice(1) + '.html';
+  try {
+    const d = execSync(`git log -1 --format=%cs -- "${src}"`, {
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    }).trim();
+    if (/^\d{4}-\d{2}-\d{2}$/.test(d)) return d;
+  } catch {}
+  return new Date().toISOString().slice(0, 10);
+};
 
 writeFileSync(
   join(OUT, 'robots.txt'),
@@ -66,7 +83,7 @@ const urlset = pages
   .map(
     (p) => `  <url>
     <loc>${p === '/' ? SITE + '/' : SITE + p}</loc>
-    <lastmod>${lastmod}</lastmod>
+    <lastmod>${lastmodFor(p)}</lastmod>
   </url>`
   )
   .join('\n');
@@ -80,6 +97,6 @@ ${urlset}
 `
 );
 
-console.log(`built ${pages.length} page(s) -> ${OUT}  (lastmod ${lastmod})`);
+console.log(`built ${pages.length} page(s) -> ${OUT}`);
 for (const p of pages) console.log('  ' + p);
 console.log(`copied ${assets.length} asset(s): ${assets.join(', ')}`);
