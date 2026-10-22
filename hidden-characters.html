@@ -55,6 +55,11 @@
         },
         {
           "@type": "Question",
+          "name": "Can an invisible character change what a filename looks like?",
+          "acceptedAnswer": { "@type": "Answer", "text": "Yes. The bidirectional override U+202E reverses the order the following characters are drawn in. Measured: the string invoice followed by U+202E followed by fdp.exe is fifteen characters and renders as invoiceexe.pdf, while wc -m reports 15 against 14 for the same name without the control and wc -L reports the same width for both. All nine bidirectional controls match both \\p{Cf} and the printable-ASCII allow-list." }
+        },
+        {
+          "@type": "Question",
           "name": "Why do wc and awk report different lengths for the same line?",
           "acceptedAnswer": { "@type": "Answer", "text": "On a shell where wchar_t is 16 bits, wc -m counts UTF-16 code units rather than code points. Measured: a line of twelve code points containing one tag character was reported as 13 by wc -m and 11 by awk length, which counts correctly. The overcount only happens for characters outside the basic multilingual plane." }
         }
@@ -302,6 +307,43 @@
     rule that gets repeated for this problem so misleading. That rule is true of the byte-order
     mark and of nothing else.</p>
 
+  <h2>The ones that change the order instead of the length</h2>
+
+  <p>Everything above is zero-width. Those characters add something you cannot see, and the damage
+    shows up as a string that will not match: <code>HelloWorld</code> is not
+    <code>Hello&#8203;World</code>. A second family fails differently. It also adds nothing you can
+    see, but it does not sit still inside the string &mdash; it changes the direction the renderer
+    lays out what follows.</p>
+
+  <p>These are the bidirectional controls: U+202A to U+202E, which embed, override and pop, and
+    U+2066 to U+2069, which isolate and pop. Nine code points. The one to know is U+202E,
+    RIGHT-TO-LEFT OVERRIDE, because it reverses everything after it until something closes it.</p>
+
+  <p>Measured on a filename. The logical string is <code>invoice</code> + U+202E +
+    <code>fdp.exe</code> &mdash; fourteen visible characters, fifteen in total. <code>cat -A</code>
+    prints <code>invoiceM-bM-^@M-.fdp.exe</code>, so a byte-level tool does show it, and
+    <code>wc -m</code> counts 15 against 14 for the same name without it. <code>wc -L</code> reports
+    14 for both, because the character has no width. What does not show it is the thing you are
+    reading. Laying the string out in a browser and asking where each glyph landed gives, for the
+    seven characters before the control, x positions of 8, 18, 28, 38, 48, 58 and 68 &mdash; ten
+    pixels apart, left to right. After it they run 138, 128, 118, 108, 98, 88 and 78.</p>
+
+  <p>Descending. The eye reads <code>invoiceexe.pdf</code>; the string is
+    <code>invoicefdp.exe</code>. Nothing in the file is a lie, and no tool has misbehaved: the
+    renderer is doing exactly what the character told it to, and the character is invisible.</p>
+
+  <p>This does not need a filename to work. Anywhere text is rendered and the reader trusts the
+    rendering &mdash; a directory listing, a diff, a code review, a message &mdash; the string that
+    runs is the logical one and the string being approved is the one on screen.</p>
+
+  <p>Two things follow. The cleanup pattern that misses three of the nine above catches all nine of
+    these: they are format characters, so <code>\p{Cf}</code> matches every one, and the allow-list
+    sweep does too. Measured one file per code point, all nine returned 1 for both patterns and 0 on
+    a clean control file. And the count will not warn you: one extra character in fifteen is not a
+    number anyone checks. Removing the character is enough to restore the order, but remove the
+    whole range rather than the closing one alone &mdash; an override with nothing to close it keeps
+    running to the end of the paragraph.</p>
+
   <h2>Taking them out</h2>
 
   <p>For a pasted string, the <a href="/zero-width-space">zero-width space remover</a> marks each
@@ -328,6 +370,8 @@
 
   <p class="crosslink">Measured 2026-09-27 with GNU coreutils and GNU grep 3.0 on Windows via Git
     Bash, cross-checked with Node 22.22.2 (ICU 78.2, Unicode 17.0) and Python 3.13.14.
+    The bidirectional section was measured 2026-10-22 with the same coreutils and grep, and with
+    Chromium through Playwright to read where each glyph landed.
     Related: <a href="/invisible-characters">the full list of invisible characters</a>,
     <a href="/invisible-characters">what one does to a form field</a>,
     <a href="/tag-characters">tag characters that hide a whole ASCII message</a>,
