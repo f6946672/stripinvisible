@@ -87,6 +87,7 @@
   #blank-tool textarea{width:100%;box-sizing:border-box;font:inherit;padding:8px 10px;
     border:1px solid var(--line);border-radius:6px;resize:vertical}
   #blank-tool .note{margin:10px 0 0;font-size:.72rem;line-height:1.45;color:var(--muted)}
+  .toolnote{margin:0 0 18px;font-size:.9rem;line-height:1.6;color:var(--muted)}
   #blank-tool .grabbtn.is-ok{background:#15803d;border-color:#15803d;color:#fff}
   #blank-tool .grabbtn.is-bad{background:#b91c1c;border-color:#b91c1c;color:#fff}
   @media (max-width:640px){#blank-tool .chips{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
@@ -157,6 +158,11 @@
       <p class="readout" id="testout" role="status" aria-live="polite">Waiting for a paste.</p>
     </div>
   </section>
+
+  <p class="toolnote">Copy and paste an invisible character here and the box tells you what you actually
+    got: how many code points arrived, how wide they are, whether any ink was painted, and whether a trim
+    would take them away. Nothing is uploaded, there is no account, and the page makes no request &mdash;
+    the measuring happens in your own browser.</p>
 
   <p class="lede"><strong>Short answer:</strong> Unicode has no code point that means
     &ldquo;nothing&rdquo;. Every character you can put into a string is a character, and each one
