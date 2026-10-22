@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Empty Character: There Isn't One, and What to Use Instead</title>
-<meta name="description" content="There is no empty character in Unicode. Measured across twenty candidates: ten come off under both JavaScript trim() and Python strip(), U+FEFF comes off only in JavaScript, nine survive both, and NFKC turns six of them into an ordinary space.">
+<meta name="description" content="Copy a blank character and see what you actually got: measured width in pixels and whether trim() removes it. Six candidates, from the one that is 16.00 px wide to the one that is nothing but a space. No login, nothing uploaded.">
 <link rel="canonical" href="https://stripinvisible.com/empty-character">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://stripinvisible.com/empty-character">
@@ -68,6 +68,34 @@
   ]
 }
 </script>
+<style>
+  #blank-tool .chips{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+  #blank-tool .chip{display:flex;flex-direction:column;align-items:flex-start;gap:3px;padding:8px 9px;
+    border:1px solid var(--line);border-radius:8px;background:#fff;cursor:pointer;text-align:left;
+    font:inherit;color:inherit;min-height:76px}
+  #blank-tool .chip:hover{border-color:#c9ccd3}
+  #blank-tool .chip[aria-checked="true"]{border-color:var(--accent);box-shadow:0 0 0 2px rgba(20,22,26,.12)}
+  #blank-tool .glyph{display:inline-block;min-width:1.5em;min-height:1.5em;line-height:1.5em;
+    text-align:center;border:1px dashed #c9ccd3;border-radius:4px;font-size:1rem;background:#fbfbfc}
+  #blank-tool .chipname{font-size:.8rem;font-weight:600;line-height:1.25}
+  #blank-tool .chipmeta{font-size:.7rem;color:var(--muted);line-height:1.3}
+  #blank-tool .pickrow{justify-content:flex-start}
+  #blank-tool #count{width:5.5em}
+  #blank-tool .grabbtn{width:auto;min-width:8.5em;padding:0 16px}
+  #blank-tool .readout{margin:10px 0 0;font-size:.82rem;line-height:1.5;color:#2a2e36;background:#f6f7f9;
+    border:1px solid var(--line);border-radius:6px;padding:8px 10px;word-break:break-word;overflow-wrap:anywhere}
+  #blank-tool textarea{width:100%;box-sizing:border-box;font:inherit;padding:8px 10px;
+    border:1px solid var(--line);border-radius:6px;resize:vertical}
+  #blank-tool .note{margin:10px 0 0;font-size:.72rem;line-height:1.45;color:var(--muted)}
+  #blank-tool .grabbtn.is-ok{background:#15803d;border-color:#15803d;color:#fff}
+  #blank-tool .grabbtn.is-bad{background:#b91c1c;border-color:#b91c1c;color:#fff}
+  @media (max-width:640px){#blank-tool .chips{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+    #blank-tool .chip{min-height:0;padding:7px 8px;gap:2px}
+    #blank-tool .chipname{font-size:.78rem}
+    #blank-tool .chipmeta{font-size:.66rem}
+    #blank-tool .glyph{min-width:1.35em;min-height:1.35em;line-height:1.35em;font-size:.95rem}
+    #blank-tool .grabbtn{width:100%}}
+</style>
 </head>
 <body>
 <main>
@@ -77,6 +105,58 @@
   </nav>
 
   <h1>There is no empty character &mdash; here is what the twenty candidates actually do</h1>
+
+  <section class="tool" id="blank-tool" aria-label="Blank character copy tool">
+    <div class="pane">
+      <label id="picklabel">Pick a character</label>
+      <div class="chips" role="radiogroup" aria-labelledby="picklabel">
+        <button type="button" class="chip" data-cp="3164" data-name="Hangul Filler" role="radio" aria-checked="false">
+          <span class="glyph" aria-hidden="true">&#12644;</span>
+          <span class="chipname">Hangul Filler</span>
+          <span class="chipmeta">U+3164 &middot; 16.00 px &middot; trim() keeps it</span>
+        </button>
+        <button type="button" class="chip" data-cp="200B" data-name="Zero Width Space" role="radio" aria-checked="false">
+          <span class="glyph" aria-hidden="true">&#8203;</span>
+          <span class="chipname">Zero Width Space</span>
+          <span class="chipmeta">U+200B &middot; 0.00 px &middot; trim() keeps it</span>
+        </button>
+        <button type="button" class="chip" data-cp="2060" data-name="Word Joiner" role="radio" aria-checked="false">
+          <span class="glyph" aria-hidden="true">&#8288;</span>
+          <span class="chipname">Word Joiner</span>
+          <span class="chipmeta">U+2060 &middot; 0.00 px &middot; trim() keeps it</span>
+        </button>
+        <button type="button" class="chip" data-cp="200E" data-name="Left-to-Right Mark" role="radio" aria-checked="false">
+          <span class="glyph" aria-hidden="true">&#8206;</span>
+          <span class="chipname">Left-to-Right Mark</span>
+          <span class="chipmeta">U+200E &middot; 0.00 px &middot; trim() keeps it</span>
+        </button>
+        <button type="button" class="chip" data-cp="00A0" data-name="No-Break Space" role="radio" aria-checked="false">
+          <span class="glyph" aria-hidden="true">&#160;</span>
+          <span class="chipname">No-Break Space</span>
+          <span class="chipmeta">U+00A0 &middot; 4.00 px &middot; trim() removes it</span>
+        </button>
+        <button type="button" class="chip" data-cp="FEFF" data-name="Zero Width No-Break Space" role="radio" aria-checked="false">
+          <span class="glyph" aria-hidden="true">&#65279;</span>
+          <span class="chipname">Zero Width No-Break Space</span>
+          <span class="chipmeta">U+FEFF &middot; 0.00 px &middot; JS trim() removes it</span>
+        </button>
+      </div>
+      <p class="row pickrow">
+        <label for="count">How many</label>
+        <input id="count" type="number" min="1" max="100" step="1" value="1" inputmode="numeric">
+        <button type="button" id="copy" class="grabbtn">Copy</button>
+      </p>
+      <p class="readout" id="copyout" role="status" aria-live="polite">Nothing copied yet. Pick a character above.</p>
+      <p class="note">Widths under the buttons were measured 2026-10-22 in Chromium 153.0.8010.12 at 16&nbsp;px Arial,
+        and the character is drawn at that size &mdash; a width in pixels is a property of the font, so a different
+        font gives a different number. The readout under the test box measures again, in your own browser.</p>
+    </div>
+    <div class="pane">
+      <label for="test">Paste it back here and see what you actually got</label>
+      <textarea id="test" rows="3" spellcheck="false" placeholder="Paste here"></textarea>
+      <p class="readout" id="testout" role="status" aria-live="polite">Waiting for a paste.</p>
+    </div>
+  </section>
 
   <p class="lede"><strong>Short answer:</strong> Unicode has no code point that means
     &ldquo;nothing&rdquo;. Every character you can put into a string is a character, and each one
@@ -289,6 +369,7 @@
     <a href="/about">About</a> &middot; <a href="/privacy">Privacy</a> &middot; <a href="/contact">Contact</a> &middot; <a href="https://github.com/f6946672/stripinvisible/blob/main/empty-character.html">Source</a>
   </footer>
 </main>
+<script defer src="/empty-character.js"></script>
 <!-- Cloudflare Web Analytics -->
 <script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token":"20874485db814b21a0a76d82d7f9b4de"}'></script>
 </body>
